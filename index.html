@@ -8,18 +8,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <style>
-        body { background-color: #f4f6f9; padding: 20px; font-family: Arial, sans-serif; }
+        /* Penyesuaian agar pas 1 layar (1920x1080 scale 125%) */
+        body { background-color: #f4f6f9; padding: 15px; font-family: Arial, sans-serif; font-size: 13px; }
         .card { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ddd; }
-        .header-title { color: #1a73e8; font-weight: bold; }
+        .header-title { color: #1a73e8; font-weight: bold; font-size: 20px; }
         
-        .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 14px; white-space: nowrap; }
-        .table-custom td { font-size: 14px; vertical-align: middle; }
-        .nowrap-col { white-space: nowrap; } 
-        .min-width-col { min-width: 250px; }
+        /* Desain Tabel */
+        .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 13px; text-align: center; vertical-align: middle; }
+        .table-custom td { font-size: 12px; vertical-align: middle; word-wrap: break-word; white-space: normal; }
+        
+        /* Pengaturan Lebar Kolom Proporsional */
+        .col-no { width: 3%; text-align: center; }
+        .col-nama { width: 17%; }
+        .col-detail { width: 22%; }
+        .col-pdf { width: 7%; text-align: center; }
+        .col-keputusan { width: 18%; }
+        .col-email { width: 13%; }
+        .col-status { width: 10%; text-align: center; }
+        .col-aksi { width: 10%; text-align: center; }
 
-        .filter-section { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .filter-section { background-color: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; }
         .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
 
+        /* Area PDF */
         #pdf-wrapper {
             position: relative;
             display: inline-block;
@@ -28,46 +39,29 @@
             margin-top: 15px;
             overflow: hidden;
             min-height: 400px;
-            min-width: 100%;
+            width: 100%;
         }
-        #pdf-canvas {
-            direction: ltr;
-            max-width: 100%;
-        }
+        #pdf-canvas { direction: ltr; max-width: 100%; height: auto; }
         #stamp-image {
-            position: absolute;
-            top: 50px;
-            left: 50px;
-            width: 150px; 
-            cursor: move;
-            border: 2px dashed #0d6efd;
-            display: none; 
-            z-index: 10;
+            position: absolute; top: 50px; left: 50px; width: 150px; 
+            cursor: move; border: 2px dashed #0d6efd; display: none; z-index: 10;
         }
-        .pdf-toolbar {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-        }
+        .pdf-toolbar { background-color: #e9ecef; padding: 8px; border-radius: 5px; display: flex; justify-content: center; align-items: center; gap: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
-    <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
             <h2 class="header-title m-0">Daftar Peminjaman Fasilitas</h2>
-            <button class="btn btn-secondary" onclick="fetchData()" id="btnRefresh">&#x21bb; Refresh Data</button>
+            <button class="btn btn-secondary btn-sm" onclick="fetchData()" id="btnRefresh">&#x21bb; Refresh Data</button>
         </div>
 
         <div class="filter-section d-flex flex-wrap gap-3 align-items-end border">
             <div>
-                <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Filter Status:</label>
-                <select id="filterStatus" class="form-select form-select-sm" onchange="applyFilter()">
+                <label class="form-label mb-1" style="font-size: 11px; font-weight:bold;">Filter Status:</label>
+                <select id="filterStatus" class="form-select form-select-sm" onchange="applyFilter()" style="width: 150px;">
                     <option value="">Semua Status</option>
                     <option value="Yes">Yes (Disetujui)</option>
                     <option value="No">No (Ditolak)</option>
@@ -75,26 +69,27 @@
                 </select>
             </div>
             <div>
-                <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Cari Nama / Fasilitas:</label>
-                <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Ketik nama / alat..." onkeyup="applyFilter()">
+                <label class="form-label mb-1" style="font-size: 11px; font-weight:bold;">Cari Nama / Fasilitas:</label>
+                <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Ketik pencarian..." onkeyup="applyFilter()" style="width: 200px;">
             </div>
             <div>
                 <button class="btn btn-outline-secondary btn-sm" onclick="resetFilter()">Reset Filter</button>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover table-custom">
+        <!-- Gunakan table-sm untuk padding tabel yang lebih ramping -->
+        <div class="table-responsive w-100 overflow-hidden">
+            <table class="table table-bordered table-hover table-custom table-sm m-0">
                 <thead>
                     <tr>
-                        <th class="nowrap-col">No</th>
-                        <th class="nowrap-col">Nama & Kontak</th>
-                        <th class="min-width-col">Detail Fasilitas & Tanggal</th>
-                        <th class="nowrap-col">Surat PDF</th>
-                        <th class="min-width-col">Keputusan Pengurus</th>
-                        <th class="nowrap-col">Email CC</th>
-                        <th class="nowrap-col">Status Akhir</th>
-                        <th class="nowrap-col">Aksi</th>
+                        <th class="col-no">No</th>
+                        <th class="col-nama">Nama & Kontak</th>
+                        <th class="col-detail">Detail Fasilitas & Tanggal</th>
+                        <th class="col-pdf">Surat</th>
+                        <th class="col-keputusan">Keputusan Pengurus</th>
+                        <th class="col-email">Email CC</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-aksi">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -109,27 +104,27 @@
 <div class="modal fade" id="modalKelola" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl"> 
     <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title">Kelola Data & Tanda Tangan</h5>
+      <div class="modal-header bg-primary text-white py-2">
+        <h5 class="modal-title" style="font-size: 16px;">Kelola Data & Tanda Tangan</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body p-3">
         
-        <div class="alert alert-info p-2 mb-3">
+        <div class="alert alert-info p-2 mb-3" style="font-size: 13px;">
             <strong id="modalNama">-</strong> | <span id="modalFasilitas">-</span><br>
             <small>Email: <span id="modalEmail">-</span></small>
         </div>
 
         <ul class="nav nav-tabs" id="myTab" role="tablist">
           <li class="nav-item" role="presentation">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEmail" type="button">1. Keputusan & Kirim Email</button>
+            <button class="nav-link active py-1" data-bs-toggle="tab" data-bs-target="#tabEmail" type="button">1. Keputusan & Email</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPdf" type="button">2. Tanda Tangan PDF</button>
+            <button class="nav-link py-1" data-bs-toggle="tab" data-bs-target="#tabPdf" type="button">2. Tanda Tangan PDF</button>
           </li>
         </ul>
         
-        <div class="tab-content border border-top-0 p-3 mb-3" id="myTabContent">
+        <div class="tab-content border border-top-0 p-3 mb-2" id="myTabContent">
           
           <!-- TAB 1: EMAIL -->
           <div class="tab-pane fade show active" id="tabEmail" role="tabpanel">
@@ -137,25 +132,25 @@
                 <input type="hidden" id="inputRowIndex">
                 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Opsi (Status)</label>
-                    <select class="form-select" id="inputOpsi" required>
+                    <label class="form-label fw-bold" style="font-size: 13px;">Opsi (Status)</label>
+                    <select class="form-select form-select-sm" id="inputOpsi" required>
                         <option value="">-- Pilih Opsi --</option>
                         <option value="Yes">Yes (Disetujui)</option>
                         <option value="No">No (Ditolak)</option>
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Keputusan Pengurus</label>
-                    <textarea class="form-control" id="inputPesan" rows="3" required></textarea>
+                    <label class="form-label fw-bold" style="font-size: 13px;">Keputusan Pengurus</label>
+                    <textarea class="form-control form-control-sm" id="inputPesan" rows="3" required></textarea>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Email CC (Opsional)</label>
-                    <input type="text" class="form-control" id="inputCc">
+                    <label class="form-label fw-bold" style="font-size: 13px;">Email CC (Opsional)</label>
+                    <input type="text" class="form-control form-control-sm" id="inputCc">
                 </div>
                 <div class="d-grid">
-                    <button type="button" class="btn btn-success" id="btnKirimEmail" onclick="kirimEmailAction()">Kirim Email Sekarang</button>
+                    <button type="button" class="btn btn-success btn-sm fw-bold" id="btnKirimEmail" onclick="kirimEmailAction()">Kirim Email Sekarang</button>
                 </div>
-                <div id="emailAlert" class="mt-2 text-center" style="display:none;"></div>
+                <div id="emailAlert" class="mt-2 text-center" style="display:none; font-size: 13px;"></div>
             </form>
           </div>
           
@@ -163,15 +158,13 @@
           <div class="tab-pane fade" id="tabPdf" role="tabpanel">
              <div class="row">
                  <div class="col-md-4 border-end">
-                     <div class="mb-3">
-                         <label class="form-label fw-bold">URL Google Drive TTD (Gambar)</label>
+                     <div class="mb-2">
+                         <label class="form-label fw-bold" style="font-size: 13px;">URL Drive Gambar TTD</label>
                          <input type="text" class="form-control form-control-sm" id="inputUrlTtd" placeholder="https://drive.google.com/file/d/....">
-                         <small class="text-muted" style="font-size: 11px;">Pastikan file Drive di-set 'Anyone with the link'</small>
                      </div>
                      <button class="btn btn-primary btn-sm w-100 mb-3" onclick="muatAreaKerjaPdf()">Muat PDF & Gambar TTD</button>
                      
-                     <hr>
-                     <div class="alert alert-warning" style="font-size: 12px;">
+                     <div class="alert alert-warning p-2" style="font-size: 11px;">
                          <strong>Instruksi:</strong><br>
                          1. Klik tombol "Muat PDF" di atas.<br>
                          2. Gambar TTD akan muncul di atas PDF.<br>
@@ -181,9 +174,9 @@
 
                  <div class="col-md-8 text-center">
                      <div class="pdf-toolbar mb-2">
-                         <button class="btn btn-sm btn-outline-secondary" id="prevPage" onclick="gantiHalaman(-1)">&#8592; Prev</button>
-                         <span>Halaman: <span id="pageNum">1</span> / <span id="pageCount">?</span></span>
-                         <button class="btn btn-sm btn-outline-secondary" id="nextPage" onclick="gantiHalaman(1)">Next &#8594;</button>
+                         <button class="btn btn-sm btn-outline-secondary py-0" id="prevPage" onclick="gantiHalaman(-1)">&#8592; Prev</button>
+                         <span style="font-size:13px;">Halaman: <span id="pageNum">1</span> / <span id="pageCount">?</span></span>
+                         <button class="btn btn-sm btn-outline-secondary py-0" id="nextPage" onclick="gantiHalaman(1)">Next &#8594;</button>
                      </div>
                      <div id="pdf-wrapper">
                          <canvas id="pdf-canvas"></canvas>
@@ -236,12 +229,9 @@
             const result = await response.json();
             
             if (result.status === "success") {
-                // PERBAIKAN: Menyisipkan rowIndex (baris spreadsheet) secara paksa ke dalam data
-                // Asumsi baris 1 adalah header, maka data index ke-0 = baris ke-2
+                // Memberikan rowIndex agar pemanggilan kelola stabil
                 globalData = result.data.map((row, index) => {
-                    if (!row.rowIndex) {
-                        row.rowIndex = index + 2; 
-                    }
+                    if (!row.rowIndex) { row.rowIndex = index + 2; }
                     return row;
                 });
                 renderTable(globalData);
@@ -267,16 +257,15 @@
 
             let tr = document.createElement('tr');
             tr.innerHTML = `
-                <td class="nowrap-col">${index + 1}</td>
-                <td class="nowrap-col"><strong>${row.nama || '-'}</strong><br><small>${row.email || '-'}</small></td>
-                <td><strong>${row.jenisFasilitas || '-'}</strong><br><small>${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</small></td>
-                <td class="nowrap-col">${row.suratUrl ? '<a href="'+row.suratUrl+'" target="_blank" class="btn btn-sm btn-outline-danger">Lihat PDF</a>' : '-'}</td>
-                <td>${row.keputusan || '-'}</td>
-                <td class="nowrap-col"><small>${row.emailCc || '-'}</small></td>
-                <td class="nowrap-col"><span class="badge ${badgeClass}">${statusText}</span></td>
-                <td class="nowrap-col">
-                    <!-- PERBAIKAN: Kirim 'rowIndex' asli spreadsheet, bukan nomor urut tabel -->
-                    <button class="btn btn-sm btn-primary" onclick="bukaModal(${row.rowIndex})">Kelola</button>
+                <td class="col-no">${index + 1}</td>
+                <td class="col-nama"><strong>${row.nama || '-'}</strong><br><small class="text-muted">${row.email || '-'}</small></td>
+                <td class="col-detail"><strong>${row.jenisFasilitas || '-'}</strong><br><span style="font-size:11px;">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</span></td>
+                <td class="col-pdf">${row.suratUrl ? '<a href="'+row.suratUrl+'" target="_blank" class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size:11px;">PDF</a>' : '-'}</td>
+                <td class="col-keputusan"><div style="max-height:60px; overflow-y:auto;">${row.keputusan || '-'}</div></td>
+                <td class="col-email"><span style="font-size:11px;">${row.emailCc || '-'}</span></td>
+                <td class="col-status"><span class="badge ${badgeClass} w-100">${statusText}</span></td>
+                <td class="col-aksi">
+                    <button class="btn btn-sm btn-primary py-1 px-3" onclick="bukaModal(${row.rowIndex})">Kelola</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -284,22 +273,18 @@
     }
 
     function bukaModal(sheetRowIndex) {
-        // PERBAIKAN: Cari data berdasarkan rowIndex aslinya
         const row = globalData.find(r => r.rowIndex === sheetRowIndex);
-        
         if(!row) { alert("Data tidak ditemukan!"); return; }
 
         document.getElementById('modalNama').innerText = row.nama;
         document.getElementById('modalFasilitas').innerText = row.jenisFasilitas;
         document.getElementById('modalEmail').innerText = row.email;
         
-        // Memastikan inputRowIndex terisi dengan angka baris (misal: 2, 3, 4, dst)
         document.getElementById('inputRowIndex').value = row.rowIndex;
         document.getElementById('inputOpsi').value = (row.statusOption === 'done') ? '' : (row.statusOption || '');
         document.getElementById('inputPesan').value = row.keputusan || '';
         document.getElementById('inputCc').value = row.emailCc || '';
         
-        // Reset area PDF
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         document.getElementById('stamp-image').style.display = 'none';
         
@@ -313,7 +298,6 @@
     }
 
     async function muatAreaKerjaPdf() {
-        // Karena kita sudah memperbaiki bukaModal, rowIndex di bawah ini dijamin tidak null lagi
         const rowIndex = document.getElementById('inputRowIndex').value;
         const urlTtd = document.getElementById('inputUrlTtd').value;
         const stampImg = document.getElementById('stamp-image');
@@ -335,11 +319,17 @@
             btn.innerText = "Memuat PDF dari server...";
             btn.disabled = true;
 
+            // PERBAIKAN: Payload dikirim 2 kali (di luar dan di dalam "data") 
+            // agar Apps Script pasti membacanya, terlepas dari manapun backend mengambilnya.
             const response = await fetch(GAS_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 redirect: 'follow',
-                body: JSON.stringify({ action: 'getPdfBase64', rowIndex: parseInt(rowIndex) })
+                body: JSON.stringify({ 
+                    action: 'getPdfBase64', 
+                    rowIndex: parseInt(rowIndex),
+                    data: { rowIndex: parseInt(rowIndex) }
+                })
             });
             const result = await response.json();
             
@@ -372,7 +362,7 @@
     function renderPage(num) {
         pageRendering = true;
         pdfDoc.getPage(num).then(function(page) {
-            const viewport = page.getViewport({scale: 1.2}); 
+            const viewport = page.getViewport({scale: 1.0}); // Skala disesuaikan agar tidak terlalu raksasa
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
@@ -472,7 +462,7 @@
         btn.innerText = "Memproses...";
         alertBox.style.display = 'block';
         alertBox.className = 'mt-2 alert alert-warning text-center';
-        alertBox.innerText = 'Sedang mengirim email, mohon tunggu...';
+        alertBox.innerText = 'Sedang mengirim email...';
 
         try {
             const response = await fetch(GAS_URL, {

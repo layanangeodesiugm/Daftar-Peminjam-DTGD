@@ -13,17 +13,20 @@
         .card { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ddd; }
         .header-title { color: #1a73e8; font-weight: bold; font-size: 20px; }
         
-        /* Desain Tabel */
-        .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 13px; text-align: center; vertical-align: middle; }
-        .table-custom td { font-size: 12px; vertical-align: middle; word-wrap: break-word; white-space: normal; }
+        /* JURUS AMPUH: Memaksa tabel tidak molor ke kanan */
+        .table-custom { table-layout: fixed; width: 100%; margin: 0; }
+        .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 12px; text-align: center; vertical-align: middle; padding: 8px 4px; }
         
-        /* Pengaturan Lebar Kolom Proporsional */
+        /* Memaksa teks panjang (seperti email) untuk turun ke bawah, bukan memanjangkan kolom */
+        .table-custom td { font-size: 11px; vertical-align: middle; padding: 6px 4px; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; white-space: normal; }
+        
+        /* Pengaturan Lebar Kolom Proporsional (Total 100%) */
         .col-no { width: 3%; text-align: center; }
-        .col-nama { width: 17%; }
-        .col-detail { width: 22%; }
-        .col-pdf { width: 7%; text-align: center; }
-        .col-keputusan { width: 18%; }
-        .col-email { width: 13%; }
+        .col-nama { width: 16%; }
+        .col-detail { width: 20%; }
+        .col-pdf { width: 10%; text-align: center; }
+        .col-keputusan { width: 17%; }
+        .col-email { width: 14%; }
         .col-status { width: 10%; text-align: center; }
         .col-aksi { width: 10%; text-align: center; }
 
@@ -36,7 +39,7 @@
             display: inline-block;
             border: 1px solid #ccc;
             background-color: #f8f9fa;
-            margin-top: 15px;
+            margin-top: 10px;
             overflow: hidden;
             min-height: 400px;
             width: 100%;
@@ -51,7 +54,7 @@
 </head>
 <body>
 
-<div class="container-fluid">
+<div class="container-fluid px-2">
     <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
             <h2 class="header-title m-0">Daftar Peminjaman Fasilitas</h2>
@@ -77,15 +80,14 @@
             </div>
         </div>
 
-        <!-- Gunakan table-sm untuk padding tabel yang lebih ramping -->
         <div class="table-responsive w-100 overflow-hidden">
-            <table class="table table-bordered table-hover table-custom table-sm m-0">
+            <table class="table table-bordered table-hover table-custom">
                 <thead>
                     <tr>
                         <th class="col-no">No</th>
                         <th class="col-nama">Nama & Kontak</th>
                         <th class="col-detail">Detail Fasilitas & Tanggal</th>
-                        <th class="col-pdf">Surat</th>
+                        <th class="col-pdf">Surat PDF</th>
                         <th class="col-keputusan">Keputusan Pengurus</th>
                         <th class="col-email">Email CC</th>
                         <th class="col-status">Status</th>
@@ -100,93 +102,98 @@
     </div>
 </div>
 
-<!-- MODAL KELOLA (POPUP) -->
-<div class="modal fade" id="modalKelola" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl"> 
+<!-- ========================================== -->
+<!-- MODAL 1: KEPUTUSAN & KIRIM EMAIL -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalEmail" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog"> 
     <div class="modal-content">
       <div class="modal-header bg-primary text-white py-2">
-        <h5 class="modal-title" style="font-size: 16px;">Kelola Data & Tanda Tangan</h5>
+        <h5 class="modal-title" style="font-size: 15px;">Keputusan & Kirim Email</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-3">
-        
-        <div class="alert alert-info p-2 mb-3" style="font-size: 13px;">
-            <strong id="modalNama">-</strong> | <span id="modalFasilitas">-</span><br>
-            <small>Email: <span id="modalEmail">-</span></small>
+        <div class="alert alert-info p-2 mb-3" style="font-size: 12px;">
+            <strong id="emailModalNama">-</strong> | <span id="emailModalFasilitas">-</span>
         </div>
+        <form id="formKirimEmail">
+            <input type="hidden" id="inputRowIndexEmail">
+            <div class="mb-2">
+                <label class="form-label fw-bold" style="font-size: 12px;">Opsi (Status)</label>
+                <select class="form-select form-select-sm" id="inputOpsi" required>
+                    <option value="">-- Pilih Opsi --</option>
+                    <option value="Yes">Yes (Disetujui)</option>
+                    <option value="No">No (Ditolak)</option>
+                </select>
+            </div>
+            <div class="mb-2">
+                <label class="form-label fw-bold" style="font-size: 12px;">Keputusan Pengurus</label>
+                <textarea class="form-control form-control-sm" id="inputPesan" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold" style="font-size: 12px;">Email CC (Opsional)</label>
+                <input type="text" class="form-control form-control-sm" id="inputCc">
+            </div>
+            <div class="d-grid">
+                <button type="button" class="btn btn-success btn-sm fw-bold" id="btnKirimEmail" onclick="kirimEmailAction()">Kirim Email Sekarang</button>
+            </div>
+            <div id="emailAlert" class="mt-2 text-center" style="display:none; font-size: 12px;"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active py-1" data-bs-toggle="tab" data-bs-target="#tabEmail" type="button">1. Keputusan & Email</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link py-1" data-bs-toggle="tab" data-bs-target="#tabPdf" type="button">2. Tanda Tangan PDF</button>
-          </li>
-        </ul>
+<!-- ========================================== -->
+<!-- MODAL 2: EDIT & TANDA TANGAN PDF -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalPdf" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl"> 
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark py-2">
+        <h5 class="modal-title fw-bold" style="font-size: 15px;">Edit & Tanda Tangan PDF</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3">
+        <div class="alert alert-secondary p-2 mb-3" style="font-size: 12px;">
+            Peminjam: <strong id="pdfModalNama">-</strong>
+        </div>
         
-        <div class="tab-content border border-top-0 p-3 mb-2" id="myTabContent">
-          
-          <!-- TAB 1: EMAIL -->
-          <div class="tab-pane fade show active" id="tabEmail" role="tabpanel">
-            <form id="formKirimEmail">
-                <input type="hidden" id="inputRowIndex">
+        <div class="row">
+            <div class="col-md-3 border-end">
+                <!-- TOMBOL DIPISAH SESUAI PERMINTAAN -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-primary" style="font-size: 12px;">Langkah 1:</label>
+                    <button class="btn btn-primary btn-sm w-100" id="btnTarikPdf" onclick="tarikPdfServer()">&#128196; Tarik PDF dari Server</button>
+                </div>
                 
-                <div class="mb-3">
-                    <label class="form-label fw-bold" style="font-size: 13px;">Opsi (Status)</label>
-                    <select class="form-select form-select-sm" id="inputOpsi" required>
-                        <option value="">-- Pilih Opsi --</option>
-                        <option value="Yes">Yes (Disetujui)</option>
-                        <option value="No">No (Ditolak)</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold" style="font-size: 13px;">Keputusan Pengurus</label>
-                    <textarea class="form-control form-control-sm" id="inputPesan" rows="3" required></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold" style="font-size: 13px;">Email CC (Opsional)</label>
-                    <input type="text" class="form-control form-control-sm" id="inputCc">
-                </div>
-                <div class="d-grid">
-                    <button type="button" class="btn btn-success btn-sm fw-bold" id="btnKirimEmail" onclick="kirimEmailAction()">Kirim Email Sekarang</button>
-                </div>
-                <div id="emailAlert" class="mt-2 text-center" style="display:none; font-size: 13px;"></div>
-            </form>
-          </div>
-          
-          <!-- TAB 2: TANDA TANGAN PDF -->
-          <div class="tab-pane fade" id="tabPdf" role="tabpanel">
-             <div class="row">
-                 <div class="col-md-4 border-end">
-                     <div class="mb-2">
-                         <label class="form-label fw-bold" style="font-size: 13px;">URL Drive Gambar TTD</label>
-                         <input type="text" class="form-control form-control-sm" id="inputUrlTtd" placeholder="https://drive.google.com/file/d/....">
-                     </div>
-                     <button class="btn btn-primary btn-sm w-100 mb-3" onclick="muatAreaKerjaPdf()">Muat PDF & Gambar TTD</button>
-                     
-                     <div class="alert alert-warning p-2" style="font-size: 11px;">
-                         <strong>Instruksi:</strong><br>
-                         1. Klik tombol "Muat PDF" di atas.<br>
-                         2. Gambar TTD akan muncul di atas PDF.<br>
-                         3. <b>Klik dan geser (drag)</b> gambar TTD ke posisi yang diinginkan.
-                     </div>
-                 </div>
+                <hr>
 
-                 <div class="col-md-8 text-center">
-                     <div class="pdf-toolbar mb-2">
-                         <button class="btn btn-sm btn-outline-secondary py-0" id="prevPage" onclick="gantiHalaman(-1)">&#8592; Prev</button>
-                         <span style="font-size:13px;">Halaman: <span id="pageNum">1</span> / <span id="pageCount">?</span></span>
-                         <button class="btn btn-sm btn-outline-secondary py-0" id="nextPage" onclick="gantiHalaman(1)">Next &#8594;</button>
-                     </div>
-                     <div id="pdf-wrapper">
-                         <canvas id="pdf-canvas"></canvas>
-                         <img id="stamp-image" src="" alt="TTD" draggable="false">
-                     </div>
-                 </div>
-             </div>
-          </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold text-success" style="font-size: 12px;">Langkah 2: URL Drive Gambar TTD</label>
+                    <input type="text" class="form-control form-control-sm" id="inputUrlTtd" placeholder="https://drive.google.com/file/d/....">
+                </div>
+                <button class="btn btn-success btn-sm w-100 mb-3" onclick="tampilkanTTD()">&#9997; Tampilkan Gambar TTD</button>
+                
+                <div class="alert alert-warning p-2 mt-4" style="font-size: 11px;">
+                    <strong>Instruksi:</strong><br>
+                    - Jika gambar TTD sudah muncul, <b>Klik dan geser (drag)</b> gambar ke posisi yang pas.
+                </div>
+            </div>
 
+            <div class="col-md-9 text-center">
+                <div class="pdf-toolbar mb-2">
+                    <button class="btn btn-sm btn-outline-secondary py-0" id="prevPage" onclick="gantiHalaman(-1)">&#8592; Prev</button>
+                    <span style="font-size:12px;">Halaman: <span id="pageNum">1</span> / <span id="pageCount">?</span></span>
+                    <button class="btn btn-sm btn-outline-secondary py-0" id="nextPage" onclick="gantiHalaman(1)">Next &#8594;</button>
+                </div>
+                <div id="pdf-wrapper">
+                    <canvas id="pdf-canvas"></canvas>
+                    <img id="stamp-image" src="" alt="TTD" draggable="false">
+                </div>
+            </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -201,7 +208,9 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec"; 
 
     let globalData = [];
-    let modalInstance = null; 
+    let modalEmailInstance = null; 
+    let modalPdfInstance = null;
+    let currentPdfRowIndex = null; // Menyimpan baris spesifik untuk PDF
 
     let pdfDoc = null,
         pageNum = 1,
@@ -209,10 +218,12 @@
         pageNumPending = null,
         canvas = document.getElementById('pdf-canvas'),
         ctx = canvas.getContext('2d');
+    
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     document.addEventListener("DOMContentLoaded", () => {
-        modalInstance = new bootstrap.Modal(document.getElementById('modalKelola'));
+        modalEmailInstance = new bootstrap.Modal(document.getElementById('modalEmail'));
+        modalPdfInstance = new bootstrap.Modal(document.getElementById('modalPdf'));
         initDragAndDrop(); 
     });
 
@@ -229,7 +240,6 @@
             const result = await response.json();
             
             if (result.status === "success") {
-                // Memberikan rowIndex agar pemanggilan kelola stabil
                 globalData = result.data.map((row, index) => {
                     if (!row.rowIndex) { row.rowIndex = index + 2; }
                     return row;
@@ -255,80 +265,90 @@
             else if (statusText.toLowerCase() === "yes") badgeClass = "bg-primary";
             else if (statusText.toLowerCase() === "no") badgeClass = "bg-danger";
 
+            // PERUBAHAN TATA LETAK TOMBOL: Edit PDF ditaruh di bawah Lihat PDF
+            let btnPdf = row.suratUrl 
+                ? `<a href="${row.suratUrl}" target="_blank" class="btn btn-outline-danger btn-sm py-0 px-2 w-100 mb-1" style="font-size:10px;">Lihat PDF</a>` 
+                : '<span class="text-muted" style="font-size:10px;">-</span>';
+            
+            let btnEditPdf = `<button class="btn btn-outline-warning text-dark fw-bold btn-sm py-0 px-2 w-100" style="font-size:10px;" onclick="bukaModalPdf(${row.rowIndex})">Edit TTD</button>`;
+
             let tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="col-no">${index + 1}</td>
-                <td class="col-nama"><strong>${row.nama || '-'}</strong><br><small class="text-muted">${row.email || '-'}</small></td>
-                <td class="col-detail"><strong>${row.jenisFasilitas || '-'}</strong><br><span style="font-size:11px;">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</span></td>
-                <td class="col-pdf">${row.suratUrl ? '<a href="'+row.suratUrl+'" target="_blank" class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size:11px;">PDF</a>' : '-'}</td>
-                <td class="col-keputusan"><div style="max-height:60px; overflow-y:auto;">${row.keputusan || '-'}</div></td>
-                <td class="col-email"><span style="font-size:11px;">${row.emailCc || '-'}</span></td>
+                <td class="col-nama"><strong>${row.nama || '-'}</strong><br><span class="text-muted">${row.email || '-'}</span></td>
+                <td class="col-detail"><strong>${row.jenisFasilitas || '-'}</strong><br><span class="text-muted">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</span></td>
+                
+                <td class="col-pdf text-center">${btnPdf}<br>${btnEditPdf}</td>
+                
+                <td class="col-keputusan"><div style="max-height:50px; overflow-y:auto;">${row.keputusan || '-'}</div></td>
+                <td class="col-email">${row.emailCc || '-'}</td>
                 <td class="col-status"><span class="badge ${badgeClass} w-100">${statusText}</span></td>
+                
                 <td class="col-aksi">
-                    <button class="btn btn-sm btn-primary py-1 px-3" onclick="bukaModal(${row.rowIndex})">Kelola</button>
+                    <button class="btn btn-sm btn-primary py-1 px-2 w-100" style="font-size:11px;" onclick="bukaModalEmail(${row.rowIndex})">Keputusan</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    function bukaModal(sheetRowIndex) {
+    // --- BUKA MODAL EMAIL ---
+    function bukaModalEmail(sheetRowIndex) {
         const row = globalData.find(r => r.rowIndex === sheetRowIndex);
-        if(!row) { alert("Data tidak ditemukan!"); return; }
+        if(!row) return;
 
-        document.getElementById('modalNama').innerText = row.nama;
-        document.getElementById('modalFasilitas').innerText = row.jenisFasilitas;
-        document.getElementById('modalEmail').innerText = row.email;
-        
-        document.getElementById('inputRowIndex').value = row.rowIndex;
+        document.getElementById('emailModalNama').innerText = row.nama;
+        document.getElementById('emailModalFasilitas').innerText = row.jenisFasilitas;
+        document.getElementById('inputRowIndexEmail').value = row.rowIndex;
         document.getElementById('inputOpsi').value = (row.statusOption === 'done') ? '' : (row.statusOption || '');
         document.getElementById('inputPesan').value = row.keputusan || '';
         document.getElementById('inputCc').value = row.emailCc || '';
         
+        modalEmailInstance.show();
+    }
+
+    // --- BUKA MODAL PDF ---
+    function bukaModalPdf(sheetRowIndex) {
+        const row = globalData.find(r => r.rowIndex === sheetRowIndex);
+        if(!row) return;
+
+        currentPdfRowIndex = sheetRowIndex; // Simpan ke variabel global spesifik
+        document.getElementById('pdfModalNama').innerText = row.nama;
+        
+        // Reset Area Canvas & Gambar
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         document.getElementById('stamp-image').style.display = 'none';
-        
-        modalInstance.show();
+        document.getElementById('stamp-image').src = '';
+        pdfDoc = null;
+        document.getElementById('pageCount').textContent = '?';
+        document.getElementById('pageNum').textContent = '1';
+
+        modalPdfInstance.show();
     }
 
-    // --- FUNGSI TANDA TANGAN PDF ---
-    function extractDriveId(url) {
-        const match = url.match(/[-\w]{25,}/);
-        return match ? match[0] : null;
-    }
+    // --- FUNGSI TARIK PDF DARI SERVER ---
+    async function tarikPdfServer() {
+        if (!currentPdfRowIndex) { alert("Error: Baris data tidak terdeteksi."); return; }
 
-    async function muatAreaKerjaPdf() {
-        const rowIndex = document.getElementById('inputRowIndex').value;
-        const urlTtd = document.getElementById('inputUrlTtd').value;
-        const stampImg = document.getElementById('stamp-image');
-        
-        if(urlTtd) {
-            const driveId = extractDriveId(urlTtd);
-            if(driveId) {
-                stampImg.src = `https://lh3.googleusercontent.com/d/${driveId}`;
-                stampImg.style.display = 'block';
-            } else {
-                alert("URL Google Drive Gambar tidak valid!"); return;
-            }
-        } else {
-            alert("Harap masukkan URL Google Drive Gambar TTD terlebih dahulu."); return;
-        }
+        const btn = document.getElementById('btnTarikPdf');
+        btn.innerHTML = "&#8982; Sedang memuat...";
+        btn.disabled = true;
 
         try {
-            const btn = document.querySelector(`button[onclick="muatAreaKerjaPdf()"]`);
-            btn.innerText = "Memuat PDF dari server...";
-            btn.disabled = true;
-
-            // PERBAIKAN: Payload dikirim 2 kali (di luar dan di dalam "data") 
-            // agar Apps Script pasti membacanya, terlepas dari manapun backend mengambilnya.
-            const response = await fetch(GAS_URL, {
+            // PERBAIKAN FATAL: Memasukkan parameter di URL DAN di Body untuk mengecoh Apps Script
+            // agar parameter rowIndex tidak mungkin bernilai null
+            const fetchUrl = `${GAS_URL}?action=getPdfBase64&rowIndex=${currentPdfRowIndex}&row=${currentPdfRowIndex}`;
+            
+            const response = await fetch(fetchUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 redirect: 'follow',
                 body: JSON.stringify({ 
                     action: 'getPdfBase64', 
-                    rowIndex: parseInt(rowIndex),
-                    data: { rowIndex: parseInt(rowIndex) }
+                    rowIndex: currentPdfRowIndex,
+                    row: currentPdfRowIndex,
+                    id: currentPdfRowIndex,
+                    data: { rowIndex: currentPdfRowIndex, row: currentPdfRowIndex }
                 })
             });
             const result = await response.json();
@@ -349,20 +369,45 @@
             } else {
                 alert("Gagal memuat PDF: " + result.message);
             }
-            btn.innerText = "Muat PDF & Gambar TTD";
-            btn.disabled = false;
         } catch(e) {
-            alert("Error menarik PDF.");
-            const btn = document.querySelector(`button[onclick="muatAreaKerjaPdf()"]`);
-            btn.innerText = "Muat PDF & Gambar TTD";
+            alert("Error menarik PDF dari server. Pastikan skrip Google Apps Script berjalan dengan benar.");
+        } finally {
+            btn.innerHTML = "&#128196; Tarik PDF dari Server";
             btn.disabled = false;
         }
     }
 
+    // --- FUNGSI TAMPILKAN GAMBAR TTD ---
+    function extractDriveId(url) {
+        const match = url.match(/[-\w]{25,}/);
+        return match ? match[0] : null;
+    }
+
+    function tampilkanTTD() {
+        const urlTtd = document.getElementById('inputUrlTtd').value;
+        const stampImg = document.getElementById('stamp-image');
+        
+        if(!urlTtd) {
+            alert("Harap masukkan URL Google Drive Gambar TTD terlebih dahulu."); 
+            return;
+        }
+
+        const driveId = extractDriveId(urlTtd);
+        if(driveId) {
+            stampImg.src = `https://lh3.googleusercontent.com/d/${driveId}`;
+            stampImg.style.display = 'block';
+            stampImg.style.top = '50px';
+            stampImg.style.left = '50px';
+        } else {
+            alert("URL Google Drive Gambar tidak valid! Pastikan format link benar."); 
+        }
+    }
+
+    // --- RENDER HALAMAN PDF ---
     function renderPage(num) {
         pageRendering = true;
         pdfDoc.getPage(num).then(function(page) {
-            const viewport = page.getViewport({scale: 1.0}); // Skala disesuaikan agar tidak terlalu raksasa
+            const viewport = page.getViewport({scale: 1.1}); 
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
@@ -386,7 +431,7 @@
         else renderPage(pageNum);
     }
 
-    // Fungsi Drag and Drop 
+    // --- DRAG AND DROP TTD ---
     function initDragAndDrop() {
         const elmnt = document.getElementById("stamp-image");
         const wrapper = document.getElementById("pdf-wrapper");
@@ -429,7 +474,7 @@
         }
     }
 
-    // --- FILTER & EMAIL ---
+    // --- FILTER & EMAIL LOGIC ---
     function applyFilter() {
         const statusVal = document.getElementById('filterStatus').value.toLowerCase();
         const searchVal = document.getElementById('filterSearch').value.toLowerCase();
@@ -448,7 +493,7 @@
     }
     
     async function kirimEmailAction() {
-        const rowIndex = document.getElementById('inputRowIndex').value;
+        const rowIndex = document.getElementById('inputRowIndexEmail').value;
         const opsi = document.getElementById('inputOpsi').value;
         const pesan = document.getElementById('inputPesan').value;
         const cc = document.getElementById('inputCc').value;
@@ -478,7 +523,7 @@
             if (result.status === "success") {
                 alertBox.className = 'mt-2 alert alert-success text-center';
                 alertBox.innerText = result.data; 
-                setTimeout(() => { modalInstance.hide(); fetchData(); }, 2000);
+                setTimeout(() => { modalEmailInstance.hide(); fetchData(); }, 2000);
             } else {
                 alertBox.className = 'mt-2 alert alert-danger text-center';
                 alertBox.innerText = 'Gagal: ' + result.message;

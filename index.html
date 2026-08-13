@@ -1,800 +1,200 @@
 <!DOCTYPE html>
 <html lang="id">
-  <head>
-    <base target="_top">
-    <meta charset="utf-8">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Peminjaman Geodesi</title>
-    <!-- Library PDF-Lib & PDF.js -->
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-    </script>
-    
+    <title>Daftar Peminjaman Fasilitas Teknik Geodesi</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-      body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f4f6f9;
-        margin: 0;
-        padding: 20px;
-        color: #333;
-      }
-      .card {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      }
-      .header-area {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #e2e8f0;
-        padding-bottom: 15px;
-        margin-bottom: 15px;
-      }
-      h2 { color: #1a73e8; margin: 0; }
-      
-      .filter-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        background-color: #f8fafc;
-        padding: 12px;
-        border-radius: 6px;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 15px;
-        align-items: center;
-      }
-      .filter-group { display: flex; flex-direction: column; gap: 4px; }
-      .filter-group label { font-size: 11px; font-weight: bold; color: #64748b; }
-      .filter-bar input, .filter-bar select { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; }
-      
-      .btn-refresh {
-        background-color: #5a6268;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        margin-left: auto;
-      }
-      .btn-refresh:hover { background-color: #484e53; }
-      
-      .table-responsive { overflow-x: auto; }
-      table { width: 100%; border-collapse: collapse; font-size: 13px; }
-      th { background-color: #1a73e8; color: white; padding: 10px; text-align: left; white-space: nowrap; }
-      td { padding: 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-      tr:hover { background-color: #f8fafc; }
-
-      textarea { width: 100%; height: 60px; padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 12px; }
-      select, input[type="text"] { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 12px; }
-      
-      .btn-send { background-color: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; white-space: nowrap; }
-      .btn-send:hover { background-color: #218838; }
-      .btn-send:disabled { background-color: #94d3a2; cursor: not-allowed; }
-      
-      .pdf-box { display: flex; flex-direction: column; gap: 5px; min-width: 100px; }
-      .btn-pdf { background-color: #dc3545; color: white; text-decoration: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; text-align: center; font-weight: bold; }
-      .btn-ttd-pdf { background-color: #0d6efd; color: white; border: none; padding: 5px 8px; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: bold; }
-      .btn-ttd-pdf:hover { background-color: #0b5ed7; }
-
-      .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; }
-      .badge-done { background-color: #d4edda; color: #155724; }
-      .badge-pending { background-color: #fff3cd; color: #856404; }
-      
-      .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
-      .pagination-btn { background-color: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-      .pagination-btn:disabled { background-color: #cbd5e1; cursor: not-allowed; }
-      .page-info { font-size: 13px; font-weight: bold; color: #475569; }
-
-      /* Modal Style */
-      .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.6);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-      }
-      .modal-box {
-        background: white;
-        width: 95%;
-        max-width: 800px;
-        max-height: 94vh;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 25px rgba(0,0,0,0.3);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 10px; }
-      .modal-header h3 { margin: 0; color: #1a73e8; font-size: 16px; }
-      .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; font-weight: bold; color: #888; }
-      
-      /* Canvas & Drag Overlay */
-      .editor-toolbar {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        background: #f8fafc;
-        padding: 8px;
-        border-radius: 6px;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 10px;
-        flex-wrap: wrap;
-        font-size: 12px;
-      }
-      .zoom-controls {
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        padding: 2px 5px;
-      }
-      .zoom-btn {
-        background: #f1f5f9;
-        border: 1px solid #cbd5e1;
-        border-radius: 3px;
-        padding: 2px 7px;
-        font-weight: bold;
-        cursor: pointer;
-      }
-      .zoom-btn:hover { background: #e2e8f0; }
-
-      .pdf-viewport-container {
-        flex: 1;
-        overflow: auto;
-        position: relative;
-        background: #525659;
-        text-align: center;
-        padding: 15px;
-        border-radius: 6px;
-        max-height: 60vh;
-      }
-      .pdf-wrapper {
-        position: relative;
-        display: inline-block;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        background: white;
-      }
-      #pdfCanvas { display: block; }
-      
-      /* Element Draggable TTD */
-      #draggableSig {
-        position: absolute;
-        top: 50px;
-        left: 50px;
-        cursor: move;
-        border: 2px dashed #0d6efd;
-        background: rgba(13, 110, 253, 0.05);
-        user-select: none;
-        touch-action: none;
-        z-index: 10;
-      }
-      #draggableSig img {
-        display: block;
-        pointer-events: none;
-        user-select: none;
-      }
-      .drag-handle {
-        background: #0d6efd;
-        color: white;
-        font-size: 9px;
-        text-align: center;
-        padding: 1px 0;
-        font-weight: bold;
-      }
-
-      .btn-save-ttd { background: #198754; color: white; padding: 10px 16px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
-      .btn-save-ttd:hover { background: #146c43; }
-
-      #loading { text-align: center; padding: 30px; font-weight: bold; color: #666; }
+        body { background-color: #f4f6f9; padding: 20px; font-family: Arial, sans-serif; }
+        .card { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ddd; }
+        .header-title { color: #1a73e8; font-weight: bold; }
+        .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 14px; white-space: nowrap; }
+        .table-custom td { font-size: 14px; vertical-align: middle; }
+        .filter-section { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
 
-    <div class="card">
-      <div class="header-area">
-        <h2>Daftar Peminjaman Fasilitas Teknik Geodesi</h2>
-        <button class="btn-refresh" onclick="loadData()">🔄 Refresh Data</button>
-      </div>
-
-      <!-- Section Filter -->
-      <div class="filter-bar">
-        <div class="filter-group">
-          <label>Filter Status:</label>
-          <select id="filterStatus" onchange="applyFilters()">
-            <option value="all">Semua Status</option>
-            <option value="pending">Belum Diproses (Pending)</option>
-            <option value="done">Sudah Terkirim (Done)</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label>Filter Tanggal:</label>
-          <input type="date" id="filterDate" onchange="applyFilters()">
-        </div>
-
-        <div class="filter-group">
-          <label>Cari Nama / Fasilitas:</label>
-          <input type="text" id="filterSearch" placeholder="Ketik nama / alat..." oninput="applyFilters()">
-        </div>
-
-        <button onclick="resetFilters()" style="padding: 6px 12px; margin-top: 15px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; cursor: pointer;">Reset Filter</button>
-      </div>
-
-      <div id="loading">⏳ Memuat data peminjaman...</div>
-
-      <div class="table-responsive">
-        <table id="dataTable" style="display:none;">
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Nama Peminjam & Kontak</th>
-              <th>Detail Fasilitas & Tanggal</th>
-              <th>Surat PDF</th>
-              <th style="width: 200px;">Keputusan Pengurus (Kolom M)</th>
-              <th style="width: 120px;">Opsi (Kolom N)</th>
-              <th style="width: 150px;">Email CC (Kolom O)</th>
-              <th>Status</th>
-              <th style="width: 110px;">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-
-      <!-- Navigasi Halaman -->
-      <div class="pagination-container" id="paginationBar" style="display:none;">
-        <button class="pagination-btn" id="btnPrev" onclick="changePage(-1)">◀ Sebelumnya</button>
-        <span class="page-info" id="pageInfo">Halaman 1 dari 1</span>
-        <button class="pagination-btn" id="btnNext" onclick="changePage(1)">Selanjutnya ▶</button>
-      </div>
-    </div>
-
-    <!-- MODAL INTERAKTIF DRAG & DROP TTD -->
-    <div class="modal-overlay" id="ttdModal">
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>Editor Penempelan TTD Interaktif</h3>
-          <button class="close-btn" onclick="closeModal()">&times;</button>
-        </div>
-
-        <div id="modalLoading" style="text-align: center; padding: 25px; font-weight: bold;">
-          ⏳ Memuat Dokumen PDF dari Google Drive...
-        </div>
-
-        <div id="modalBody" style="display:none; flex-direction:column; height:100%;">
-          <!-- Toolbar Input PNG, Zoom, & Controls -->
-          <div class="editor-toolbar">
-            <div style="flex:2; min-width:180px;">
-              <b>Link PNG TTD:</b>
-              <input type="text" id="ttdDriveLink" placeholder="Paste link PNG Drive TTD..." style="font-size:11px; margin-top:2px;">
-            </div>
-            <button onclick="loadPngTtd()" style="padding:5px 8px; font-size:11px; background:#0d6efd; color:white; border:none; border-radius:3px; cursor:pointer; margin-top:14px;">
-              🔄 Muat TTD
+<div class="container-fluid">
+    <div class="card p-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+            <h2 class="header-title m-0">Daftar Peminjaman Fasilitas Teknik Geodesi</h2>
+            <button class="btn btn-secondary" onclick="fetchData()">
+                &#x21bb; Refresh Data
             </button>
-
-            <!-- FITUR ZOOM PDF -->
-            <div style="margin-top:2px;">
-              <b>Zoom Kertas:</b><br>
-              <div class="zoom-controls">
-                <button class="zoom-btn" onclick="zoomPdf(-0.1)">-</button>
-                <span id="zoomPercent" style="font-weight:bold; font-size:11px; min-width:35px; text-align:center;">100%</span>
-                <button class="zoom-btn" onclick="zoomPdf(0.1)">+</button>
-                <button class="zoom-btn" onclick="fitPdfPage()" style="font-size:10px;">Fit</button>
-              </div>
-            </div>
-
-            <div>
-              <b>Ukuran TTD:</b><br>
-              <input type="range" id="sigScaleRange" min="40" max="300" value="120" oninput="resizeSigImage(this.value)" style="width:90px; margin-top:4px;">
-            </div>
-
-            <div style="margin-left:auto;">
-              <b>Halaman:</b><br>
-              <button onclick="changePdfPage(-1)" style="padding:2px 6px;">◀</button>
-              <span id="pageNavInfo" style="font-weight:bold;">1/1</span>
-              <button onclick="changePdfPage(1)" style="padding:2px 6px;">▶</button>
-            </div>
-          </div>
-
-          <p style="margin: 0 0 6px 0; font-size:11px; color:#198754; font-weight:bold;">
-            👉 Petunjuk: Geser / Drag gambar Tanda Tangan ke posisi tepat pada kertas PDF di bawah ini!
-          </p>
-
-          <!-- Viewer PDF & Draggable Container -->
-          <div class="pdf-viewport-container" id="pdfContainer">
-            <div class="pdf-wrapper" id="pdfWrapper">
-              <canvas id="pdfCanvas"></canvas>
-              
-              <!-- Draggable Box -->
-              <div id="draggableSig" style="display:none;">
-                <div class="drag-handle">GESER TTD</div>
-                <img id="sigImg" src="" style="width: 120px; height: auto;">
-              </div>
-            </div>
-          </div>
-
-          <button class="btn-save-ttd" id="btnProsesTtd" onclick="prosesDanTempelTtdPng()">✍️ Simpan PDF Bertanda Tangan</button>
         </div>
-      </div>
+
+        <!-- Filter Area -->
+        <div class="filter-section d-flex flex-wrap gap-3 align-items-end border">
+            <div>
+                <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Filter Opsi Status:</label>
+                <select id="filterStatus" class="form-select form-select-sm" onchange="applyFilter()">
+                    <option value="">Semua Status</option>
+                    <option value="Yes">Yes (Disetujui)</option>
+                    <option value="No">No (Ditolak)</option>
+                    <option value="done">Done (Selesai)</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Filter Tanggal Mulai:</label>
+                <input type="date" id="filterTanggal" class="form-control form-control-sm" onchange="applyFilter()">
+            </div>
+            <div>
+                <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Cari Nama / Fasilitas:</label>
+                <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Ketik nama / alat..." onkeyup="applyFilter()">
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="resetFilter()">Reset Filter</button>
+            </div>
+        </div>
+
+        <!-- Table Area -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-custom">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Peminjam & Kontak</th>
+                        <th>Detail Fasilitas & Tanggal</th>
+                        <th>Surat PDF</th>
+                        <th>Keputusan Pengurus</th>
+                        <th>Opsi</th>
+                        <th>Email CC</th>
+                        <th>Status Akhir</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="9" class="loading">Memuat data dari server... Mohon tunggu.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
+</div>
 
-    <script>
-      // Endpoint API Apps Script
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec";
+<script>
+    // =========================================================================
+    // WAJIB GANTI URL DI BAWAH INI DENGAN WEB APP URL (doPost) ANDA!
+    // =========================================================================
+    const GAS_URL = "MASUKKAN_URL_WEB_APP_ANDA_DISINI"; 
 
-      var rawData = [];
-      var filteredData = [];
-      var currentPage = 1;
-      var pageSize = 10;
-      
-      var activeRowIndex = null;
-      var currentPdfBase64 = null;
-      var currentFileName = null;
-      
-      var currentPdfJsDoc = null;
-      var pdfPageNum = 1;
-      var pdfScale = 'auto'; // Default Auto-Fit
+    let globalData = [];
 
-      var currentPngBase64 = null;
-      var currentPngMime = null;
-
-      // Variables Draggable
-      var isDragging = false;
-      var startX, startY, initialLeft, initialTop;
-
-      window.onload = function() {
-        initDraggable();
-        loadData();
-      };
-
-      async function callGasApi(action, data = {}) {
-        try {
-          const response = await fetch(GAS_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: action, data: data })
-          });
-          const resJson = await response.json();
-          if (resJson.status === 'error') {
-            throw new Error(resJson.message);
-          }
-          return resJson.data;
-        } catch (err) {
-          throw err;
-        }
-      }
-
-      async function loadData() {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('dataTable').style.display = 'none';
-        document.getElementById('paginationBar').style.display = 'none';
+    // Fungsi mengambil data menggunakan POST (Sesuai dengan sistem API Anda)
+    async function fetchData() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '<tr><td colspan="9" class="loading">Memuat data dari server... Mohon tunggu.</td></tr>';
 
         try {
-          const data = await callGasApi('getPeminjamanData');
-          rawData = data || [];
-          applyFilters();
-        } catch (err) {
-          document.getElementById('loading').innerText = "❌ Gagal memuat data: " + err.message;
+            // Kita gunakan method POST dan kirim payload JSON {action: 'getPeminjamanData'}
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                // Mode text/plain sering digunakan untuk menghindari error CORS preflight di GAS
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+                body: JSON.stringify({ action: 'getPeminjamanData' })
+            });
+            
+            const result = await response.json();
+
+            if (result.status === "success") {
+                globalData = result.data; // Data sudah berbentuk Array of Objects dari Backend
+                renderTable(globalData);
+            } else {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-danger text-center">Gagal mengambil data: ${result.message}</td></tr>`;
+            }
+        } catch (error) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Terjadi kesalahan jaringan atau URL Endpoint salah. Cek Console.</td></tr>';
+            console.error("Error fetching data: ", error);
         }
-      }
+    }
 
-      function applyFilters() {
-        var statusVal = document.getElementById('filterStatus').value;
-        var dateVal = document.getElementById('filterDate').value;
-        var searchVal = document.getElementById('filterSearch').value.toLowerCase().trim();
-
-        var formattedSearchDate = "";
-        if (dateVal) {
-          var parts = dateVal.split('-');
-          formattedSearchDate = parts[2] + '-' + parts[1] + '-' + parts[0];
-        }
-
-        filteredData = rawData.filter(function(item) {
-          var isDone = (item.statusOption && item.statusOption.toString().toLowerCase() === 'done');
-          
-          if (statusVal === 'pending' && isDone) return false;
-          if (statusVal === 'done' && !isDone) return false;
-
-          if (formattedSearchDate) {
-            var matchDate = (item.tglMulai && item.tglMulai.includes(formattedSearchDate)) ||
-                            (item.tglSelesai && item.tglSelesai.includes(formattedSearchDate)) ||
-                            (item.timestamp && item.timestamp.includes(formattedSearchDate));
-            if (!matchDate) return false;
-          }
-
-          if (searchVal) {
-            var matchSearch = (item.nama && item.nama.toLowerCase().includes(searchVal)) ||
-                              (item.jenisFasilitas && item.jenisFasilitas.toLowerCase().includes(searchVal)) ||
-                              (item.detailFasilitas && item.detailFasilitas.toLowerCase().includes(searchVal)) ||
-                              (item.email && item.email.toLowerCase().includes(searchVal));
-            if (!matchSearch) return false;
-          }
-
-          return true;
-        });
-
-        currentPage = 1;
-        renderTable();
-      }
-
-      function resetFilters() {
-        document.getElementById('filterStatus').value = 'all';
-        document.getElementById('filterDate').value = '';
-        document.getElementById('filterSearch').value = '';
-        applyFilters();
-      }
-
-      function renderTable() {
-        var tbody = document.getElementById('tableBody');
+    // Fungsi menampilkan data ke tabel
+    function renderTable(dataArray) {
+        const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
 
-        if (filteredData.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 20px;">Tidak ada data yang sesuai.</td></tr>';
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('dataTable').style.display = 'table';
-          document.getElementById('paginationBar').style.display = 'none';
-          return;
+        if (dataArray.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center">Tidak ada data yang sesuai.</td></tr>';
+            return;
         }
 
-        var totalPages = Math.ceil(filteredData.length / pageSize);
-        if (currentPage > totalPages) currentPage = totalPages;
+        dataArray.forEach((row, index) => {
+            // Menentukan warna badge status
+            let badgeClass = "bg-secondary";
+            let statusText = row.statusOption || "Menunggu";
+            
+            if (statusText.toLowerCase() === "done") badgeClass = "bg-success";
+            else if (statusText.toLowerCase() === "yes") badgeClass = "bg-primary";
+            else if (statusText.toLowerCase() === "no") badgeClass = "bg-danger";
+            else if (statusText !== "Menunggu") badgeClass = "bg-info text-dark";
 
-        var startIndex = (currentPage - 1) * pageSize;
-        var endIndex = Math.min(startIndex + pageSize, filteredData.length);
-        var pageItems = filteredData.slice(startIndex, endIndex);
+            let tr = document.createElement('tr');
+            
+            // Karena kode backend Anda sudah menggunakan object (row.nama, row.email, dll),
+            // pemanggilan datanya menjadi sangat rapi seperti di bawah ini:
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>
+                    <strong>${row.nama || '-'}</strong><br>
+                    <small>${row.noHp || '-'} | ${row.email || '-'}</small>
+                </td>
+                <td>
+                    <strong>${row.jenisFasilitas || '-'}:</strong> ${row.detailFasilitas || '-'}<br>
+                    <small class="text-muted">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</small>
+                </td>
+                <td>${row.suratUrl ? '<a href="'+row.suratUrl+'" target="_blank" class="btn btn-sm btn-outline-danger">Lihat PDF</a>' : '-'}</td>
+                <td>${row.keputusan || '-'}</td>
+                <td>${row.statusOption || '-'}</td>
+                <td><small>${row.emailCc || '-'}</small></td>
+                <td><span class="badge ${badgeClass}">${statusText}</span></td>
+                <td>
+                    <!-- Tombol aksi dikirim dengan data baris (rowIndex) -->
+                    <button class="btn btn-sm btn-primary mb-1" onclick="alert('Ini akan memicu aksi untuk baris ke-${row.rowIndex}')">Kelola</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
-        pageItems.forEach(function(item, index) {
-          var isDone = (item.statusOption && item.statusOption.toString().toLowerCase() === 'done');
-          var statusBadge = isDone 
-            ? '<span class="badge badge-done">Done (Terkirim)</span>' 
-            : '<span class="badge badge-pending">Belum Diproses</span>';
+    // Fungsi Filter Data
+    function applyFilter() {
+        const statusVal = document.getElementById('filterStatus').value.toLowerCase();
+        const dateVal = document.getElementById('filterTanggal').value;
+        const searchVal = document.getElementById('filterSearch').value.toLowerCase();
 
-          var pdfBtn = item.suratUrl 
-            ? '<a href="' + item.suratUrl + '" target="_blank" class="btn-pdf">📄 Lihat PDF</a>' 
-            : '<span style="color:#888; font-size:11px;">(Tanpa PDF)</span>';
+        const filteredData = globalData.filter(row => {
+            // Gabungkan teks untuk pencarian bebas
+            const rowText = `${row.nama} ${row.jenisFasilitas} ${row.detailFasilitas}`.toLowerCase(); 
+            const rowStatus = (row.statusOption || '').toLowerCase(); 
+            
+            // Logika pencocokan filter
+            const matchStatus = statusVal === "" || rowStatus.includes(statusVal);
+            const matchSearch = searchVal === "" || rowText.includes(searchVal);
+            const matchDate = dateVal === "" || (row.tglMulai && row.tglMulai.includes(dateVal)) || (row.tglSelesai && row.tglSelesai.includes(dateVal));
 
-          var ttdBtn = '<button class="btn-ttd-pdf" onclick="openTtdModal(' + item.rowIndex + ')">✍️ Edit / TTD</button>';
-
-          var selectedYes = (item.statusOption === 'Yes') ? 'selected' : '';
-          var selectedNo = (item.statusOption === 'No') ? 'selected' : '';
-
-          var rowHtml = '<tr>' +
-            '<td>' + (startIndex + index + 1) + '</td>' +
-            '<td><b>' + item.nama + '</b><br><small>' + item.email + '</small><br><small>HP: ' + item.noHp + '</small></td>' +
-            '<td><b>' + item.jenisFasilitas + '</b><br><small>' + (item.detailFasilitas || '') + '</small><br><small>📅 ' + item.tglMulai + ' s/d ' + item.tglSelesai + '</small></td>' +
-            '<td><div class="pdf-box">' + pdfBtn + ttdBtn + '</div></td>' +
-            '<td><textarea id="msg-' + item.rowIndex + '" placeholder="Ketik Keputusan...">' + (item.keputusan || '') + '</textarea></td>' +
-            '<td>' +
-              '<select id="opt-' + item.rowIndex + '">' +
-                '<option value="">-- Pilih --</option>' +
-                '<option value="Yes" ' + selectedYes + '>Yes (Setuju)</option>' +
-                '<option value="No" ' + selectedNo + '>No (Tolak)</option>' +
-              '</select>' +
-            '</td>' +
-            '<td><input type="text" id="cc-' + item.rowIndex + '" value="' + (item.emailCc || '') + '" placeholder="email_cc@ugm.ac.id"></td>' +
-            '<td>' + statusBadge + '</td>' +
-            '<td>' +
-              '<button class="btn-send" id="btn-' + item.rowIndex + '" onclick="eksekusiKirim(' + item.rowIndex + ')">' +
-                (isDone ? 'Kirim Ulang' : 'Kirim Email') +
-              '</button>' +
-            '</td>' +
-          '</tr>';
-
-          tbody.innerHTML += rowHtml;
+            return matchStatus && matchSearch && matchDate;
         });
 
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('dataTable').style.display = 'table';
-        document.getElementById('paginationBar').style.display = 'flex';
+        renderTable(filteredData);
+    }
 
-        document.getElementById('pageInfo').innerText = "Halaman " + currentPage + " dari " + totalPages + " (Total " + filteredData.length + " Data)";
-        document.getElementById('btnPrev').disabled = (currentPage === 1);
-        document.getElementById('btnNext').disabled = (currentPage === totalPages);
-      }
+    // Reset Filter
+    function resetFilter() {
+        document.getElementById('filterStatus').value = "";
+        document.getElementById('filterTanggal').value = "";
+        document.getElementById('filterSearch').value = "";
+        renderTable(globalData);
+    }
 
-      function changePage(direction) {
-        currentPage += direction;
-        renderTable();
-      }
+    // Panggil fetch data otomatis saat web pertama kali dibuka
+    window.onload = fetchData;
+</script>
 
-      /* FUNGSI MODAL DRAG & DROP TTD */
-      async function openTtdModal(rowIndex) {
-        activeRowIndex = rowIndex;
-        pdfScale = 'auto'; // Reset ke Auto-Fit A4
-        document.getElementById('ttdModal').style.display = 'flex';
-        document.getElementById('modalLoading').style.display = 'block';
-        document.getElementById('modalBody').style.display = 'none';
-
-        var savedLink = localStorage.getItem('ttdDriveLink') || '';
-        document.getElementById('ttdDriveLink').value = savedLink;
-
-        try {
-          const res = await callGasApi('getPdfBase64', { rowIndex: rowIndex });
-          currentPdfBase64 = res.base64;
-          currentFileName = res.fileName;
-          
-          var pdfBinaryStr = atob(currentPdfBase64);
-          var pdfBytes = new Uint8Array(pdfBinaryStr.length);
-          for (var i = 0; i < pdfBinaryStr.length; i++) {
-            pdfBytes[i] = pdfBinaryStr.charCodeAt(i);
-          }
-
-          currentPdfJsDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-          pdfPageNum = currentPdfJsDoc.numPages;
-
-          document.getElementById('modalLoading').style.display = 'none';
-          document.getElementById('modalBody').style.display = 'flex';
-
-          await renderPdfPage(pdfPageNum);
-
-          if (savedLink) {
-            loadPngTtd();
-          }
-        } catch (err) {
-          alert("Gagal memuat PDF: " + err.message);
-          closeModal();
-        }
-      }
-
-      function closeModal() {
-        document.getElementById('ttdModal').style.display = 'none';
-        activeRowIndex = null;
-        currentPdfBase64 = null;
-        currentPdfJsDoc = null;
-      }
-
-      /* RENDER PDF + DYNAMIC AUTO FIT & ZOOM */
-      async function renderPdfPage(pageNum) {
-        if (!currentPdfJsDoc) return;
-        pdfPageNum = pageNum;
-        
-        var page = await currentPdfJsDoc.getPage(pageNum);
-        
-        // Hitung Otomatis agar Kertas A4 Pas / Fit dengan Layar Modal
-        if (pdfScale === 'auto') {
-          var container = document.getElementById('pdfContainer');
-          var containerWidth = (container.clientWidth || 700) - 40;
-          var unscaledViewport = page.getViewport({ scale: 1.0 });
-          pdfScale = containerWidth / unscaledViewport.width;
-          if (pdfScale < 0.3) pdfScale = 0.3;
-        }
-
-        var viewport = page.getViewport({ scale: pdfScale });
-
-        var canvas = document.getElementById('pdfCanvas');
-        var context = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-        document.getElementById('pageNavInfo').innerText = pageNum + " / " + currentPdfJsDoc.numPages;
-        document.getElementById('zoomPercent').innerText = Math.round(pdfScale * 100) + "%";
-
-        // Jaga agar TTD tetap berada di dalam batas kertas saat di-zoom
-        var sigBox = document.getElementById('draggableSig');
-        if (sigBox.style.display !== 'none') {
-          var maxLeft = canvas.width - sigBox.offsetWidth;
-          var maxTop = canvas.height - sigBox.offsetHeight;
-          
-          if (!sigBox.style.top || sigBox.style.top === '50px') {
-            sigBox.style.left = Math.max(0, canvas.width - sigBox.offsetWidth - 30) + 'px';
-            sigBox.style.top = Math.max(0, canvas.height - sigBox.offsetHeight - 30) + 'px';
-          } else {
-            if (sigBox.offsetLeft > maxLeft) sigBox.style.left = Math.max(0, maxLeft) + 'px';
-            if (sigBox.offsetTop > maxTop) sigBox.style.top = Math.max(0, maxTop) + 'px';
-          }
-        }
-      }
-
-      function zoomPdf(delta) {
-        if (pdfScale === 'auto') pdfScale = 0.8;
-        pdfScale = Math.max(0.3, Math.min(2.5, pdfScale + delta));
-        renderPdfPage(pdfPageNum);
-      }
-
-      function fitPdfPage() {
-        pdfScale = 'auto';
-        renderPdfPage(pdfPageNum);
-      }
-
-      function changePdfPage(direction) {
-        var newPage = pdfPageNum + direction;
-        if (newPage >= 1 && newPage <= currentPdfJsDoc.numPages) {
-          renderPdfPage(newPage);
-        }
-      }
-
-      async function loadPngTtd() {
-        var driveLink = document.getElementById('ttdDriveLink').value.trim();
-        if (!driveLink) {
-          alert("Masukkan Link / ID File PNG Tanda Tangan terlebih dahulu.");
-          return;
-        }
-
-        try {
-          const res = await callGasApi('getSignaturePngBase64', { driveUrlOrId: driveLink });
-          localStorage.setItem('ttdDriveLink', driveLink);
-          currentPngBase64 = res.base64;
-          currentPngMime = res.mimeType;
-
-          var img = document.getElementById('sigImg');
-          img.src = 'data:' + res.mimeType + ';base64,' + res.base64;
-          
-          var sigBox = document.getElementById('draggableSig');
-          sigBox.style.display = 'block';
-
-          var canvas = document.getElementById('pdfCanvas');
-          sigBox.style.left = (canvas.width - 150) + 'px';
-          sigBox.style.top = (canvas.height - 100) + 'px';
-        } catch (err) {
-          alert("Gagal memuat PNG TTD: " + err.message);
-        }
-      }
-
-      function resizeSigImage(newWidth) {
-        var img = document.getElementById('sigImg');
-        img.style.width = newWidth + 'px';
-      }
-
-      /* DRAG & DROP LOGIC */
-      function initDraggable() {
-        var sigEl = document.getElementById('draggableSig');
-
-        function startDrag(e) {
-          isDragging = true;
-          var clientX = e.clientX || (e.touches && e.touches[0].clientX);
-          var clientY = e.clientY || (e.touches && e.touches[0].clientY);
-          startX = clientX;
-          startY = clientY;
-          initialLeft = sigEl.offsetLeft;
-          initialTop = sigEl.offsetTop;
-          if (e.type === 'touchstart') e.preventDefault();
-        }
-
-        function doDrag(e) {
-          if (!isDragging) return;
-          var clientX = e.clientX || (e.touches && e.touches[0].clientX);
-          var clientY = e.clientY || (e.touches && e.touches[0].clientY);
-          var dx = clientX - startX;
-          var dy = clientY - startY;
-
-          var canvas = document.getElementById('pdfCanvas');
-          var maxLeft = canvas.width - sigEl.offsetWidth;
-          var maxTop = canvas.height - sigEl.offsetHeight;
-
-          var newLeft = Math.max(0, Math.min(initialLeft + dx, maxLeft));
-          var newTop = Math.max(0, Math.min(initialTop + dy, maxTop));
-
-          sigEl.style.left = newLeft + 'px';
-          sigEl.style.top = newTop + 'px';
-        }
-
-        function stopDrag() { isDragging = false; }
-
-        sigEl.addEventListener('mousedown', startDrag);
-        document.addEventListener('mousemove', doDrag);
-        document.addEventListener('mouseup', stopDrag);
-
-        sigEl.addEventListener('touchstart', startDrag, { passive: false });
-        document.addEventListener('touchmove', doDrag, { passive: false });
-        document.addEventListener('touchend', stopDrag);
-      }
-
-      /* EKSEKUSI PENEMPELAN DENGAN KOORDINAT TEPAT */
-      async function prosesDanTempelTtdPng() {
-        if (!currentPngBase64) {
-          alert("Muat gambar PNG Tanda Tangan terlebih dahulu!");
-          return;
-        }
-
-        var btn = document.getElementById('btnProsesTtd');
-        btn.disabled = true;
-        btn.innerText = "⏳ Menempelkan & Menyimpan PDF...";
-
-        try {
-          var pdfDoc = await PDFLib.PDFDocument.load(currentPdfBase64);
-          var pages = pdfDoc.getPages();
-          var targetPage = pages[pdfPageNum - 1];
-
-          var pngBinaryStr = atob(currentPngBase64);
-          var pngBytes = new Uint8Array(pngBinaryStr.length);
-          for (var i = 0; i < pngBinaryStr.length; i++) {
-            pngBytes[i] = pngBinaryStr.charCodeAt(i);
-          }
-
-          var sigImage;
-          if (currentPngMime && currentPngMime.includes('jpeg')) {
-            sigImage = await pdfDoc.embedJpg(pngBytes);
-          } else {
-            sigImage = await pdfDoc.embedPng(pngBytes);
-          }
-
-          var sigEl = document.getElementById('draggableSig');
-          var canvas = document.getElementById('pdfCanvas');
-
-          var pdfWidth = targetPage.getWidth();
-          var pdfHeight = targetPage.getHeight();
-
-          var scaleX = pdfWidth / canvas.width;
-          var scaleY = pdfHeight / canvas.height;
-
-          var htmlLeft = sigEl.offsetLeft;
-          var htmlTop = sigEl.offsetTop + 14; 
-          var htmlWidth = sigEl.offsetWidth;
-          var htmlHeight = sigEl.offsetHeight - 14;
-
-          var pdfX = htmlLeft * scaleX;
-          var pdfWidthScaled = htmlWidth * scaleX;
-          var pdfHeightScaled = htmlHeight * scaleY;
-          var pdfY = pdfHeight - ((htmlTop + htmlHeight) * scaleY);
-
-          targetPage.drawImage(sigImage, {
-            x: pdfX,
-            y: pdfY,
-            width: pdfWidthScaled,
-            height: pdfHeightScaled,
-          });
-
-          var modifiedPdfBase64 = await pdfDoc.saveAsBase64();
-
-          const resSave = await callGasApi('saveSignedPdf', {
-            rowIndex: activeRowIndex,
-            base64Data: modifiedPdfBase64,
-            originalFileName: currentFileName
-          });
-
-          alert(resSave);
-          btn.disabled = false;
-          btn.innerText = "✍️ Simpan PDF Bertanda Tangan";
-          closeModal();
-          loadData();
-
-        } catch (e) {
-          alert("Terjadi kesalahan teknis: " + e.message);
-          btn.disabled = false;
-          btn.innerText = "✍️ Simpan PDF Bertanda Tangan";
-        }
-      }
-
-      async function eksekusiKirim(rowIndex) {
-        var message = document.getElementById('msg-' + rowIndex).value;
-        var option = document.getElementById('opt-' + rowIndex).value;
-        var cc = document.getElementById('cc-' + rowIndex).value;
-        var btn = document.getElementById('btn-' + rowIndex);
-
-        if (!option || (option !== 'Yes' && option !== 'No')) {
-          alert("Pilih Opsi (Yes / No) di Kolom N terlebih dahulu!");
-          return;
-        }
-
-        btn.disabled = true;
-        btn.innerText = "⏳ Memproses...";
-
-        try {
-          const res = await callGasApi('kirimEmailBaris', {
-            rowIndex: rowIndex,
-            newMessage: message,
-            newOption: option,
-            ccEmails: cc
-          });
-          alert(res);
-          loadData();
-        } catch (err) {
-          alert("Gagal mengirim: " + err.message);
-          btn.disabled = false;
-          btn.innerText = "Kirim Email";
-        }
-      }
-    </script>
-  </body>
+</body>
 </html>

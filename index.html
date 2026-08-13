@@ -8,32 +8,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <style>
-        /* Penyesuaian agar pas 1 layar (1920x1080 scale 125%) */
+        /* Penyesuaian agar pas 1 layar */
         body { background-color: #f4f6f9; padding: 15px; font-family: Arial, sans-serif; font-size: 13px; }
         .card { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ddd; }
         .header-title { color: #1a73e8; font-weight: bold; font-size: 20px; }
         
-        /* JURUS AMPUH: Memaksa tabel tidak molor ke kanan */
         .table-custom { table-layout: fixed; width: 100%; margin: 0; }
         .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 12px; text-align: center; vertical-align: middle; padding: 8px 4px; }
         
-        /* Memaksa teks panjang (seperti email) untuk turun ke bawah, bukan memanjangkan kolom */
         .table-custom td { font-size: 11px; vertical-align: middle; padding: 6px 4px; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; white-space: normal; }
         
-        /* Pengaturan Lebar Kolom Proporsional (Total 100%) */
+        /* PERUBAHAN LEBAR KOLOM */
         .col-no { width: 3%; text-align: center; }
         .col-nama { width: 16%; }
         .col-detail { width: 20%; }
         .col-pdf { width: 10%; text-align: center; }
-        .col-keputusan { width: 17%; }
-        .col-email { width: 14%; }
+        .col-keputusan { width: 12%; } /* Dikecilkan dari 17% */
+        .col-email { width: 19%; }     /* Diperbesar untuk menampung List Email */
         .col-status { width: 10%; text-align: center; }
         .col-aksi { width: 10%; text-align: center; }
 
         .filter-section { background-color: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; }
         .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
 
-        /* Area PDF */
         #pdf-wrapper {
             position: relative;
             display: inline-block;
@@ -102,9 +99,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
 <!-- MODAL 1: KEPUTUSAN & KIRIM EMAIL -->
-<!-- ========================================== -->
 <div class="modal fade" id="modalEmail" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog"> 
     <div class="modal-content">
@@ -144,9 +139,7 @@
   </div>
 </div>
 
-<!-- ========================================== -->
 <!-- MODAL 2: EDIT & TANDA TANGAN PDF -->
-<!-- ========================================== -->
 <div class="modal fade" id="modalPdf" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl"> 
     <div class="modal-content">
@@ -161,26 +154,21 @@
         
         <div class="row">
             <div class="col-md-3 border-end">
-                <!-- TOMBOL DIPISAH SESUAI PERMINTAAN -->
                 <div class="mb-4">
                     <label class="form-label fw-bold text-primary" style="font-size: 12px;">Langkah 1:</label>
                     <button class="btn btn-primary btn-sm w-100" id="btnTarikPdf" onclick="tarikPdfServer()">&#128196; Tarik PDF dari Server</button>
                 </div>
-                
                 <hr>
-
                 <div class="mb-2">
                     <label class="form-label fw-bold text-success" style="font-size: 12px;">Langkah 2: URL Drive Gambar TTD</label>
                     <input type="text" class="form-control form-control-sm" id="inputUrlTtd" placeholder="https://drive.google.com/file/d/....">
                 </div>
                 <button class="btn btn-success btn-sm w-100 mb-3" onclick="tampilkanTTD()">&#9997; Tampilkan Gambar TTD</button>
-                
                 <div class="alert alert-warning p-2 mt-4" style="font-size: 11px;">
                     <strong>Instruksi:</strong><br>
                     - Jika gambar TTD sudah muncul, <b>Klik dan geser (drag)</b> gambar ke posisi yang pas.
                 </div>
             </div>
-
             <div class="col-md-9 text-center">
                 <div class="pdf-toolbar mb-2">
                     <button class="btn btn-sm btn-outline-secondary py-0" id="prevPage" onclick="gantiHalaman(-1)">&#8592; Prev</button>
@@ -193,7 +181,6 @@
                 </div>
             </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -202,15 +189,12 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // =========================================================================
-    // KONFIGURASI API 
-    // =========================================================================
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec"; 
 
     let globalData = [];
     let modalEmailInstance = null; 
     let modalPdfInstance = null;
-    let currentPdfRowIndex = null; // Menyimpan baris spesifik untuk PDF
+    let currentPdfRowIndex = null;
 
     let pdfDoc = null,
         pageNum = 1,
@@ -259,13 +243,24 @@
         if (dataArray.length === 0) return tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data.</td></tr>';
 
         dataArray.forEach((row, index) => {
+            // PERUBAHAN 1: Styling Badge Status (Ukuran lebih besar dan proporsional)
             let badgeClass = "bg-secondary";
             let statusText = row.statusOption || "Menunggu";
             if (statusText.toLowerCase() === "done") badgeClass = "bg-success";
             else if (statusText.toLowerCase() === "yes") badgeClass = "bg-primary";
             else if (statusText.toLowerCase() === "no") badgeClass = "bg-danger";
+            
+            let statusHtml = `<span class="badge ${badgeClass} w-100 py-2" style="font-size: 12px; letter-spacing: 0.5px;">${statusText}</span>`;
 
-            // PERUBAHAN TATA LETAK TOMBOL: Edit PDF ditaruh di bawah Lihat PDF
+            // PERUBAHAN 2: Ubah Email CC dari numpuk (koma) menjadi List (ul li)
+            let emailCcHtml = '<span class="text-muted">-</span>';
+            if (row.emailCc && row.emailCc.trim() !== '') {
+                let emails = row.emailCc.split(','); 
+                emailCcHtml = '<ul style="margin: 0; padding-left: 15px; text-align: left;">' + 
+                              emails.map(email => `<li style="margin-bottom: 2px;">${email.trim()}</li>`).join('') + 
+                              '</ul>';
+            }
+
             let btnPdf = row.suratUrl 
                 ? `<a href="${row.suratUrl}" target="_blank" class="btn btn-outline-danger btn-sm py-0 px-2 w-100 mb-1" style="font-size:10px;">Lihat PDF</a>` 
                 : '<span class="text-muted" style="font-size:10px;">-</span>';
@@ -280,9 +275,9 @@
                 
                 <td class="col-pdf text-center">${btnPdf}<br>${btnEditPdf}</td>
                 
-                <td class="col-keputusan"><div style="max-height:50px; overflow-y:auto;">${row.keputusan || '-'}</div></td>
-                <td class="col-email">${row.emailCc || '-'}</td>
-                <td class="col-status"><span class="badge ${badgeClass} w-100">${statusText}</span></td>
+                <td class="col-keputusan"><div style="max-height:60px; overflow-y:auto;">${row.keputusan || '-'}</div></td>
+                <td class="col-email">${emailCcHtml}</td>
+                <td class="col-status">${statusHtml}</td>
                 
                 <td class="col-aksi">
                     <button class="btn btn-sm btn-primary py-1 px-2 w-100" style="font-size:11px;" onclick="bukaModalEmail(${row.rowIndex})">Keputusan</button>
@@ -292,7 +287,6 @@
         });
     }
 
-    // --- BUKA MODAL EMAIL ---
     function bukaModalEmail(sheetRowIndex) {
         const row = globalData.find(r => r.rowIndex === sheetRowIndex);
         if(!row) return;
@@ -307,15 +301,13 @@
         modalEmailInstance.show();
     }
 
-    // --- BUKA MODAL PDF ---
     function bukaModalPdf(sheetRowIndex) {
         const row = globalData.find(r => r.rowIndex === sheetRowIndex);
         if(!row) return;
 
-        currentPdfRowIndex = sheetRowIndex; // Simpan ke variabel global spesifik
+        currentPdfRowIndex = sheetRowIndex; 
         document.getElementById('pdfModalNama').innerText = row.nama;
         
-        // Reset Area Canvas & Gambar
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         document.getElementById('stamp-image').style.display = 'none';
         document.getElementById('stamp-image').src = '';
@@ -326,7 +318,6 @@
         modalPdfInstance.show();
     }
 
-    // --- FUNGSI TARIK PDF DARI SERVER ---
     async function tarikPdfServer() {
         if (!currentPdfRowIndex) { alert("Error: Baris data tidak terdeteksi."); return; }
 
@@ -335,8 +326,6 @@
         btn.disabled = true;
 
         try {
-            // PERBAIKAN FATAL: Memasukkan parameter di URL DAN di Body untuk mengecoh Apps Script
-            // agar parameter rowIndex tidak mungkin bernilai null
             const fetchUrl = `${GAS_URL}?action=getPdfBase64&rowIndex=${currentPdfRowIndex}&row=${currentPdfRowIndex}`;
             
             const response = await fetch(fetchUrl, {
@@ -377,7 +366,6 @@
         }
     }
 
-    // --- FUNGSI TAMPILKAN GAMBAR TTD ---
     function extractDriveId(url) {
         const match = url.match(/[-\w]{25,}/);
         return match ? match[0] : null;
@@ -403,7 +391,6 @@
         }
     }
 
-    // --- RENDER HALAMAN PDF ---
     function renderPage(num) {
         pageRendering = true;
         pdfDoc.getPage(num).then(function(page) {
@@ -431,7 +418,6 @@
         else renderPage(pageNum);
     }
 
-    // --- DRAG AND DROP TTD ---
     function initDragAndDrop() {
         const elmnt = document.getElementById("stamp-image");
         const wrapper = document.getElementById("pdf-wrapper");
@@ -474,7 +460,6 @@
         }
     }
 
-    // --- FILTER & EMAIL LOGIC ---
     function applyFilter() {
         const statusVal = document.getElementById('filterStatus').value.toLowerCase();
         const searchVal = document.getElementById('filterSearch').value.toLowerCase();

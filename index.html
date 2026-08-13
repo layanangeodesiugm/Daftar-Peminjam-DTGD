@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Peminjaman Fasilitas Teknik Geodesi</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- PDF.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <style>
@@ -14,17 +12,14 @@
         .card { border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid #ddd; }
         .header-title { color: #1a73e8; font-weight: bold; }
         
-        /* FIX TABEL AGAR BISA SCROLL KE KANAN */
         .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 14px; white-space: nowrap; }
         .table-custom td { font-size: 14px; vertical-align: middle; }
-        /* Memaksa kolom tertentu tidak turun baris agar memicu scroll horizontal */
         .nowrap-col { white-space: nowrap; } 
         .min-width-col { min-width: 250px; }
 
         .filter-section { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
 
-        /* AREA KERJA PDF & TANDA TANGAN */
         #pdf-wrapper {
             position: relative;
             display: inline-block;
@@ -32,18 +27,21 @@
             background-color: #f8f9fa;
             margin-top: 15px;
             overflow: hidden;
+            min-height: 400px;
+            min-width: 100%;
         }
         #pdf-canvas {
             direction: ltr;
+            max-width: 100%;
         }
         #stamp-image {
             position: absolute;
             top: 50px;
             left: 50px;
-            width: 150px; /* Ukuran default TTD */
+            width: 150px; 
             cursor: move;
             border: 2px dashed #0d6efd;
-            display: none; /* Disembunyikan sampai gambar diload */
+            display: none; 
             z-index: 10;
         }
         .pdf-toolbar {
@@ -85,7 +83,6 @@
             </div>
         </div>
 
-        <!-- Wadah tabel yang responsif -->
         <div class="table-responsive">
             <table class="table table-bordered table-hover table-custom">
                 <thead>
@@ -110,7 +107,7 @@
 
 <!-- MODAL KELOLA (POPUP) -->
 <div class="modal fade" id="modalKelola" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl"> <!-- Diperlebar menjadi XL agar area PDF luas -->
+  <div class="modal-dialog modal-xl"> 
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
         <h5 class="modal-title">Kelola Data & Tanda Tangan</h5>
@@ -138,7 +135,6 @@
           <div class="tab-pane fade show active" id="tabEmail" role="tabpanel">
             <form id="formKirimEmail">
                 <input type="hidden" id="inputRowIndex">
-                <input type="hidden" id="inputPdfUrl"> <!-- Menyimpan URL PDF asli -->
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Opsi (Status)</label>
@@ -166,7 +162,6 @@
           <!-- TAB 2: TANDA TANGAN PDF -->
           <div class="tab-pane fade" id="tabPdf" role="tabpanel">
              <div class="row">
-                 <!-- Panel Kontrol Kiri -->
                  <div class="col-md-4 border-end">
                      <div class="mb-3">
                          <label class="form-label fw-bold">URL Google Drive TTD (Gambar)</label>
@@ -184,20 +179,14 @@
                      </div>
                  </div>
 
-                 <!-- Panel Canvas Kanan -->
                  <div class="col-md-8 text-center">
-                     <!-- Toolbar Halaman PDF -->
                      <div class="pdf-toolbar mb-2">
                          <button class="btn btn-sm btn-outline-secondary" id="prevPage" onclick="gantiHalaman(-1)">&#8592; Prev</button>
                          <span>Halaman: <span id="pageNum">1</span> / <span id="pageCount">?</span></span>
                          <button class="btn btn-sm btn-outline-secondary" id="nextPage" onclick="gantiHalaman(1)">Next &#8594;</button>
                      </div>
-
-                     <!-- Area Kerja Drag & Drop -->
                      <div id="pdf-wrapper">
-                         <!-- Canvas PDF -->
                          <canvas id="pdf-canvas"></canvas>
-                         <!-- Gambar TTD yang bisa digeser -->
                          <img id="stamp-image" src="" alt="TTD" draggable="false">
                      </div>
                  </div>
@@ -214,14 +203,13 @@
 
 <script>
     // =========================================================================
-    // KONFIGURASI API (Ganti dengan URL doPost Anda)
+    // KONFIGURASI API 
     // =========================================================================
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec"; 
 
     let globalData = [];
     let modalInstance = null; 
 
-    // Variabel Global untuk PDF.js
     let pdfDoc = null,
         pageNum = 1,
         pageRendering = false,
@@ -232,10 +220,9 @@
 
     document.addEventListener("DOMContentLoaded", () => {
         modalInstance = new bootstrap.Modal(document.getElementById('modalKelola'));
-        initDragAndDrop(); // Aktifkan fungsi geser gambar
+        initDragAndDrop(); 
     });
 
-    // --- FUNGSI TABEL & DATA ---
     async function fetchData() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '<tr><td colspan="8" class="loading">Memuat data...</td></tr>';
@@ -247,10 +234,23 @@
                 body: JSON.stringify({ action: 'getPeminjamanData' })
             });
             const result = await response.json();
+            
             if (result.status === "success") {
-                globalData = result.data; renderTable(globalData);
-            } else { tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">Gagal: ${result.message}</td></tr>`; }
-        } catch (error) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger text-center">Error Jaringan. Cek Console.</td></tr>'; }
+                // PERBAIKAN: Menyisipkan rowIndex (baris spreadsheet) secara paksa ke dalam data
+                // Asumsi baris 1 adalah header, maka data index ke-0 = baris ke-2
+                globalData = result.data.map((row, index) => {
+                    if (!row.rowIndex) {
+                        row.rowIndex = index + 2; 
+                    }
+                    return row;
+                });
+                renderTable(globalData);
+            } else { 
+                tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">Gagal: ${result.message}</td></tr>`; 
+            }
+        } catch (error) { 
+            tbody.innerHTML = '<tr><td colspan="8" class="text-danger text-center">Error Jaringan. Cek Console.</td></tr>'; 
+        }
     }
 
     function renderTable(dataArray) {
@@ -274,20 +274,27 @@
                 <td>${row.keputusan || '-'}</td>
                 <td class="nowrap-col"><small>${row.emailCc || '-'}</small></td>
                 <td class="nowrap-col"><span class="badge ${badgeClass}">${statusText}</span></td>
-                <td class="nowrap-col"><button class="btn btn-sm btn-primary" onclick="bukaModal(${index})">Kelola</button></td>
+                <td class="nowrap-col">
+                    <!-- PERBAIKAN: Kirim 'rowIndex' asli spreadsheet, bukan nomor urut tabel -->
+                    <button class="btn btn-sm btn-primary" onclick="bukaModal(${row.rowIndex})">Kelola</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    function bukaModal(index) {
-        const row = globalData[index];
+    function bukaModal(sheetRowIndex) {
+        // PERBAIKAN: Cari data berdasarkan rowIndex aslinya
+        const row = globalData.find(r => r.rowIndex === sheetRowIndex);
+        
+        if(!row) { alert("Data tidak ditemukan!"); return; }
+
         document.getElementById('modalNama').innerText = row.nama;
         document.getElementById('modalFasilitas').innerText = row.jenisFasilitas;
         document.getElementById('modalEmail').innerText = row.email;
         
+        // Memastikan inputRowIndex terisi dengan angka baris (misal: 2, 3, 4, dst)
         document.getElementById('inputRowIndex').value = row.rowIndex;
-        document.getElementById('inputPdfUrl').value = row.suratUrl || '';
         document.getElementById('inputOpsi').value = (row.statusOption === 'done') ? '' : (row.statusOption || '');
         document.getElementById('inputPesan').value = row.keputusan || '';
         document.getElementById('inputCc').value = row.emailCc || '';
@@ -299,24 +306,21 @@
         modalInstance.show();
     }
 
-    // --- FUNGSI TAB 2: PDF & TANDA TANGAN ---
-    
-    // Konversi link Drive biasa menjadi link Direct Image
+    // --- FUNGSI TANDA TANGAN PDF ---
     function extractDriveId(url) {
         const match = url.match(/[-\w]{25,}/);
         return match ? match[0] : null;
     }
 
     async function muatAreaKerjaPdf() {
+        // Karena kita sudah memperbaiki bukaModal, rowIndex di bawah ini dijamin tidak null lagi
         const rowIndex = document.getElementById('inputRowIndex').value;
         const urlTtd = document.getElementById('inputUrlTtd').value;
         const stampImg = document.getElementById('stamp-image');
         
-        // 1. Validasi Gambar TTD
         if(urlTtd) {
             const driveId = extractDriveId(urlTtd);
             if(driveId) {
-                // Trik Bypass Google Drive Image
                 stampImg.src = `https://lh3.googleusercontent.com/d/${driveId}`;
                 stampImg.style.display = 'block';
             } else {
@@ -326,7 +330,6 @@
             alert("Harap masukkan URL Google Drive Gambar TTD terlebih dahulu."); return;
         }
 
-        // 2. Tarik PDF Base64 dari Backend (Apps Script)
         try {
             const btn = document.querySelector(`button[onclick="muatAreaKerjaPdf()"]`);
             btn.innerText = "Memuat PDF dari server...";
@@ -341,7 +344,6 @@
             const result = await response.json();
             
             if (result.status === "success" && result.data) {
-                // Decode base64 dan render ke Canvas
                 const pdfData = atob(result.data); 
                 const pdfArray = new Uint8Array(pdfData.length);
                 for (let i = 0; i < pdfData.length; i++) {
@@ -361,14 +363,16 @@
             btn.disabled = false;
         } catch(e) {
             alert("Error menarik PDF.");
+            const btn = document.querySelector(`button[onclick="muatAreaKerjaPdf()"]`);
+            btn.innerText = "Muat PDF & Gambar TTD";
+            btn.disabled = false;
         }
     }
 
-    // Fungsi Render Halaman PDF ke Canvas
     function renderPage(num) {
         pageRendering = true;
         pdfDoc.getPage(num).then(function(page) {
-            const viewport = page.getViewport({scale: 1.2}); // Skala zoom PDF
+            const viewport = page.getViewport({scale: 1.2}); 
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
@@ -392,7 +396,7 @@
         else renderPage(pageNum);
     }
 
-    // Fungsi Drag and Drop Logika Murni (Vanilla JS)
+    // Fungsi Drag and Drop 
     function initDragAndDrop() {
         const elmnt = document.getElementById("stamp-image");
         const wrapper = document.getElementById("pdf-wrapper");
@@ -417,7 +421,6 @@
             pos3 = e.clientX;
             pos4 = e.clientY;
             
-            // Batasi agar gambar tidak keluar dari area PDF
             let newTop = elmnt.offsetTop - pos2;
             let newLeft = elmnt.offsetLeft - pos1;
             
@@ -436,12 +439,68 @@
         }
     }
 
-    // --- FILTER ---
-    function applyFilter() { /* ... logika filter tetap sama ... */ }
-    function resetFilter() { /* ... logika reset tetap sama ... */ }
+    // --- FILTER & EMAIL ---
+    function applyFilter() {
+        const statusVal = document.getElementById('filterStatus').value.toLowerCase();
+        const searchVal = document.getElementById('filterSearch').value.toLowerCase();
+        const filteredData = globalData.filter(row => {
+            const rowText = `${row.nama} ${row.jenisFasilitas} ${row.detailFasilitas}`.toLowerCase(); 
+            const rowStatus = (row.statusOption || '').toLowerCase(); 
+            return (statusVal === "" || rowStatus.includes(statusVal)) && (searchVal === "" || rowText.includes(searchVal));
+        });
+        renderTable(filteredData);
+    }
+
+    function resetFilter() {
+        document.getElementById('filterStatus').value = "";
+        document.getElementById('filterSearch').value = "";
+        renderTable(globalData);
+    }
     
-    // --- KIRIM EMAIL ---
-    async function kirimEmailAction() { /* ... logika fetch kirimEmailBaris tetap sama ... */ }
+    async function kirimEmailAction() {
+        const rowIndex = document.getElementById('inputRowIndex').value;
+        const opsi = document.getElementById('inputOpsi').value;
+        const pesan = document.getElementById('inputPesan').value;
+        const cc = document.getElementById('inputCc').value;
+
+        if(!opsi || !pesan) { alert("Harap isi Opsi dan Keputusan Pengurus!"); return; }
+
+        const btn = document.getElementById('btnKirimEmail');
+        const alertBox = document.getElementById('emailAlert');
+        
+        btn.disabled = true;
+        btn.innerText = "Memproses...";
+        alertBox.style.display = 'block';
+        alertBox.className = 'mt-2 alert alert-warning text-center';
+        alertBox.innerText = 'Sedang mengirim email, mohon tunggu...';
+
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                redirect: 'follow',
+                body: JSON.stringify({
+                    action: 'kirimEmailBaris',
+                    data: { rowIndex: parseInt(rowIndex), newOption: opsi, newMessage: pesan, ccEmails: cc }
+                })
+            });
+            const result = await response.json();
+            if (result.status === "success") {
+                alertBox.className = 'mt-2 alert alert-success text-center';
+                alertBox.innerText = result.data; 
+                setTimeout(() => { modalInstance.hide(); fetchData(); }, 2000);
+            } else {
+                alertBox.className = 'mt-2 alert alert-danger text-center';
+                alertBox.innerText = 'Gagal: ' + result.message;
+            }
+        } catch (error) {
+            alertBox.className = 'mt-2 alert alert-danger text-center';
+            alertBox.innerText = 'Terjadi kesalahan jaringan!';
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Kirim Email Sekarang";
+        }
+    }
 
     window.onload = fetchData;
 </script>

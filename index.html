@@ -6,9 +6,9 @@
     <title>Daftar Peminjaman Fasilitas Teknik Geodesi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Library PDF.js (Untuk Menampilkan PDF di Canvas HTML) -->
+    <!-- Library PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <!-- Library PDF-lib (Untuk Menyimpan / Burn TTD ke File PDF Asli) -->
+    <!-- Library PDF-lib -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
     <style>
@@ -31,16 +31,14 @@
 
         .filter-section { background-color: #fff; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; }
 
-        /* Styling PDF Wrapper */
         #pdf-outer-wrapper { width: 100%; background-color: #e9ecef; overflow-x: auto; padding: 15px 0; display: flex; justify-content: center; }
         #pdf-wrapper { position: relative; border: 1px solid #ccc; background-color: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
         #pdf-canvas { display: block; }
         
-        /* Draggable items (Gambar & Teks) */
         #stamp-image { position: absolute; top: 50px; left: 50px; width: 150px; cursor: move; border: 2px dashed #0d6efd; display: none; z-index: 10; }
-        #teks-draggable { position: absolute; top: 100px; left: 50px; cursor: move; display: none; z-index: 11; font-family: Helvetica, sans-serif; font-size: 16px; color: black; font-weight: bold; white-space: nowrap; }
+        #teks-draggable { position: absolute; top: 100px; left: 50px; cursor: move; display: none; z-index: 11; font-family: Helvetica, sans-serif; font-size: 16px; color: black; font-weight: bold; white-space: nowrap; border: 1px dashed transparent; }
         
-        .draggable-item:hover { border: 1px dashed red; }
+        .draggable-item:hover { border: 1px dashed red !important; }
     </style>
 </head>
 <body>
@@ -91,7 +89,6 @@
             </table>
         </div>
         
-        <!-- Wadah untuk Tombol Pagination -->
         <div id="pagination-controls" class="d-flex justify-content-center align-items-center mt-3 gap-2"></div>
     </div>
 </div>
@@ -159,10 +156,13 @@
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold text-dark" style="font-size: 12px;">3. Tambah Teks / Tanggal</label>
-                    <div class="input-group input-group-sm">
+                    <div class="input-group input-group-sm mb-2">
                         <input type="text" class="form-control" id="inputTeksPdf" placeholder="Yogyakarta, 20 Agustus 2026">
                         <button class="btn btn-outline-secondary" onclick="tampilkanTeks()">Munculkan</button>
                     </div>
+                    <!-- Tambahan Fitur Skala Teks -->
+                    <label class="form-label fw-bold text-dark mb-0" style="font-size: 11px;">Atur Ukuran Teks</label>
+                    <input type="range" class="form-range" id="skalaTeks" min="10" max="50" value="16" oninput="aturSkalaTeks()">
                 </div>
                 <hr>
                 
@@ -200,7 +200,7 @@
     let globalData = [];
     let filteredData = []; 
     let currentPage = 1;
-    const itemsPerPage = 10; // Jumlah data per halaman
+    const itemsPerPage = 10; 
     
     let modalEmailInstance, modalPdfInstance;
     
@@ -223,9 +223,6 @@
         initDragElement(document.getElementById("teks-draggable"));
     });
 
-    // ==========================================
-    // TABEL DATA, FILTER, & PAGINATION
-    // ==========================================
     async function fetchData() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Mengambil data dari server... Mohon tunggu.</td></tr>';
@@ -259,7 +256,6 @@
             return; 
         }
 
-        // Tentukan Index Start dan End berdasarkan Halaman
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
         const paginatedItems = filteredData.slice(startIndex, endIndex);
@@ -282,7 +278,6 @@
             let btnPdf = row.suratUrl ? `<a href="${row.suratUrl}" target="_blank" class="btn btn-outline-danger btn-sm py-0 px-2 w-100 mb-1" style="font-size:10px;">Lihat PDF</a>` : '-';
             let btnEditPdf = `<button class="btn btn-outline-warning text-dark fw-bold btn-sm py-0 px-2 w-100" style="font-size:10px;" onclick="bukaModalPdf(${row.rowIndex})">Edit TTD</button>`;
 
-            // Urutan Nomor (No) berlanjut meskipun ganti halaman
             let currentItemNumber = startIndex + index + 1;
 
             let tr = document.createElement('tr');
@@ -299,7 +294,6 @@
             tbody.appendChild(tr);
         });
 
-        // Setup tombol halaman setelah tabel ter-render
         setupPagination();
     }
 
@@ -308,23 +302,20 @@
         container.innerHTML = '';
         
         const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-        if (totalPages <= 1) return; // Sembunyikan pagination jika hanya 1 halaman
+        if (totalPages <= 1) return;
 
-        // Tombol Prev
         const btnPrev = document.createElement('button');
         btnPrev.className = 'btn btn-sm ' + (currentPage === 1 ? 'btn-secondary disabled' : 'btn-outline-primary');
         btnPrev.innerText = '<< Sebelumnya';
         btnPrev.onclick = () => { if(currentPage > 1) { currentPage--; renderTable(); } };
         container.appendChild(btnPrev);
 
-        // Keterangan Halaman
         const spanInfo = document.createElement('span');
         spanInfo.className = 'mx-3 fw-bold';
         spanInfo.style.fontSize = '13px';
         spanInfo.innerText = `Halaman ${currentPage} dari ${totalPages}`;
         container.appendChild(spanInfo);
 
-        // Tombol Next
         const btnNext = document.createElement('button');
         btnNext.className = 'btn btn-sm ' + (currentPage === totalPages ? 'btn-secondary disabled' : 'btn-outline-primary');
         btnNext.innerText = 'Selanjutnya >>';
@@ -336,13 +327,10 @@
         const sVal = document.getElementById('filterStatus').value.toLowerCase();
         const qVal = document.getElementById('filterSearch').value.toLowerCase();
         
-        // Filter data global
         filteredData = globalData.filter(r => 
             (sVal === "" || (r.statusOption||'').toLowerCase().includes(sVal)) && 
             (qVal === "" || `${r.nama} ${r.jenisFasilitas} ${r.detailFasilitas}`.toLowerCase().includes(qVal))
         );
-        
-        // Reset kembali ke halaman 1 setiap kali mencari
         currentPage = 1;
         renderTable();
     }
@@ -355,9 +343,6 @@
         renderTable(); 
     }
 
-    // ==========================================
-    // EMAIL
-    // ==========================================
     function bukaModalEmail(rIndex) {
         const r = globalData.find(x => x.rowIndex === rIndex);
         if(!r) return;
@@ -385,9 +370,6 @@
         finally { btn.disabled = false; btn.innerText = "Kirim Email"; }
     }
 
-    // ==========================================
-    // PDF EDITOR
-    // ==========================================
     function bukaModalPdf(rIndex) {
         currentPdfRowIndex = rIndex;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -395,6 +377,11 @@
         document.getElementById('stamp-image').style.display = 'none';
         document.getElementById('teks-draggable').style.display = 'none';
         document.getElementById('inputTeksPdf').value = "";
+        
+        // Reset scale slider
+        document.getElementById('skalaTtd').value = 150;
+        document.getElementById('skalaTeks').value = 16;
+        document.getElementById('teks-draggable').style.fontSize = '16px';
         
         pdfDoc = null; base64PdfAsli = null; base64TtdAsli = null;
         document.getElementById('pageCount').textContent = '?';
@@ -469,7 +456,15 @@
         } catch(e) { alert("Error mengambil gambar TTD."); } finally { btn.innerText = "Tampilkan TTD"; btn.disabled = false; }
     }
 
-    function aturSkalaTtd() { document.getElementById('stamp-image').style.width = document.getElementById('skalaTtd').value + 'px'; }
+    function aturSkalaTtd() { 
+        document.getElementById('stamp-image').style.width = document.getElementById('skalaTtd').value + 'px'; 
+    }
+    
+    // Fungsi Baru: Atur Skala Teks
+    function aturSkalaTeks() {
+        const ukuranTeks = document.getElementById('skalaTeks').value;
+        document.getElementById('teks-draggable').style.fontSize = ukuranTeks + 'px';
+    }
     
     function tampilkanTeks() {
         const teks = document.getElementById('inputTeksPdf').value;
@@ -479,6 +474,7 @@
         el.style.display = 'block';
         el.style.top = '100px'; 
         el.style.left = '100px';
+        aturSkalaTeks(); // panggil agar mengikuti slider yang sedang aktif
     }
 
     function initDragElement(elmnt) {
@@ -533,7 +529,11 @@
             if (txtEl.style.display !== 'none') {
                 const txtX = txtEl.offsetLeft * scaleX;
                 const txtY = height - ((txtEl.offsetTop + txtEl.offsetHeight) * scaleY) + (10 * scaleY); 
-                currentPage.drawText(txtEl.innerText, { x: txtX, y: txtY, size: 16 * scaleX, color: rgb(0, 0, 0) });
+                
+                // Ambil ukuran font dinamis dari input slider
+                const currentFontSize = parseInt(document.getElementById('skalaTeks').value) || 16;
+                
+                currentPage.drawText(txtEl.innerText, { x: txtX, y: txtY, size: currentFontSize * scaleX, color: rgb(0, 0, 0) });
             }
 
             alertBox.innerText = "Mengunggah PDF ke Google Drive...";

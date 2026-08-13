@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
   <head>
+    <base target="_top">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Peminjaman Geodesi</title>
@@ -102,8 +103,8 @@
       .modal-box {
         background: white;
         width: 95%;
-        max-width: 700px;
-        max-height: 92vh;
+        max-width: 800px;
+        max-height: 94vh;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 4px 25px rgba(0,0,0,0.3);
@@ -118,7 +119,7 @@
       /* Canvas & Drag Overlay */
       .editor-toolbar {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         align-items: center;
         background: #f8fafc;
         padding: 8px;
@@ -128,6 +129,25 @@
         flex-wrap: wrap;
         font-size: 12px;
       }
+      .zoom-controls {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 2px 5px;
+      }
+      .zoom-btn {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 3px;
+        padding: 2px 7px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .zoom-btn:hover { background: #e2e8f0; }
+
       .pdf-viewport-container {
         flex: 1;
         overflow: auto;
@@ -136,6 +156,7 @@
         text-align: center;
         padding: 15px;
         border-radius: 6px;
+        max-height: 60vh;
       }
       .pdf-wrapper {
         position: relative;
@@ -251,19 +272,32 @@
         </div>
 
         <div id="modalBody" style="display:none; flex-direction:column; height:100%;">
-          <!-- Toolbar Input PNG & Controls -->
+          <!-- Toolbar Input PNG, Zoom, & Controls -->
           <div class="editor-toolbar">
-            <div style="flex:2; min-width:200px;">
+            <div style="flex:2; min-width:180px;">
               <b>Link PNG TTD:</b>
               <input type="text" id="ttdDriveLink" placeholder="Paste link PNG Drive TTD..." style="font-size:11px; margin-top:2px;">
             </div>
-            <button onclick="loadPngTtd()" style="padding:5px 10px; font-size:11px; background:#0d6efd; color:white; border:none; border-radius:3px; cursor:pointer; margin-top:14px;">
+            <button onclick="loadPngTtd()" style="padding:5px 8px; font-size:11px; background:#0d6efd; color:white; border:none; border-radius:3px; cursor:pointer; margin-top:14px;">
               🔄 Muat TTD
             </button>
+
+            <!-- FITUR ZOOM PDF -->
+            <div style="margin-top:2px;">
+              <b>Zoom Kertas:</b><br>
+              <div class="zoom-controls">
+                <button class="zoom-btn" onclick="zoomPdf(-0.1)">-</button>
+                <span id="zoomPercent" style="font-weight:bold; font-size:11px; min-width:35px; text-align:center;">100%</span>
+                <button class="zoom-btn" onclick="zoomPdf(0.1)">+</button>
+                <button class="zoom-btn" onclick="fitPdfPage()" style="font-size:10px;">Fit</button>
+              </div>
+            </div>
+
             <div>
               <b>Ukuran TTD:</b><br>
-              <input type="range" id="sigScaleRange" min="50" max="300" value="120" oninput="resizeSigImage(this.value)" style="width:100px; margin-top:4px;">
+              <input type="range" id="sigScaleRange" min="40" max="300" value="120" oninput="resizeSigImage(this.value)" style="width:90px; margin-top:4px;">
             </div>
+
             <div style="margin-left:auto;">
               <b>Halaman:</b><br>
               <button onclick="changePdfPage(-1)" style="padding:2px 6px;">◀</button>
@@ -277,7 +311,7 @@
           </p>
 
           <!-- Viewer PDF & Draggable Container -->
-          <div class="pdf-viewport-container">
+          <div class="pdf-viewport-container" id="pdfContainer">
             <div class="pdf-wrapper" id="pdfWrapper">
               <canvas id="pdfCanvas"></canvas>
               
@@ -295,7 +329,7 @@
     </div>
 
     <script>
-      // URL Google Apps Script Web App Endpoint API
+      // Endpoint API Apps Script
       const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec";
 
       var rawData = [];
@@ -309,6 +343,8 @@
       
       var currentPdfJsDoc = null;
       var pdfPageNum = 1;
+      var pdfScale = 'auto'; // Default Auto-Fit
+
       var currentPngBase64 = null;
       var currentPngMime = null;
 
@@ -321,7 +357,6 @@
         loadData();
       };
 
-      // Helper function untuk Panggilan REST API ke GAS
       async function callGasApi(action, data = {}) {
         try {
           const response = await fetch(GAS_URL, {
@@ -474,6 +509,7 @@
       /* FUNGSI MODAL DRAG & DROP TTD */
       async function openTtdModal(rowIndex) {
         activeRowIndex = rowIndex;
+        pdfScale = 'auto'; // Reset ke Auto-Fit A4
         document.getElementById('ttdModal').style.display = 'flex';
         document.getElementById('modalLoading').style.display = 'block';
         document.getElementById('modalBody').style.display = 'none';
@@ -516,12 +552,23 @@
         currentPdfJsDoc = null;
       }
 
+      /* RENDER PDF + DYNAMIC AUTO FIT & ZOOM */
       async function renderPdfPage(pageNum) {
         if (!currentPdfJsDoc) return;
         pdfPageNum = pageNum;
         
         var page = await currentPdfJsDoc.getPage(pageNum);
-        var viewport = page.getViewport({ scale: 1.2 });
+        
+        // Hitung Otomatis agar Kertas A4 Pas / Fit dengan Layar Modal
+        if (pdfScale === 'auto') {
+          var container = document.getElementById('pdfContainer');
+          var containerWidth = (container.clientWidth || 700) - 40;
+          var unscaledViewport = page.getViewport({ scale: 1.0 });
+          pdfScale = containerWidth / unscaledViewport.width;
+          if (pdfScale < 0.3) pdfScale = 0.3;
+        }
+
+        var viewport = page.getViewport({ scale: pdfScale });
 
         var canvas = document.getElementById('pdfCanvas');
         var context = canvas.getContext('2d');
@@ -531,12 +578,33 @@
         await page.render({ canvasContext: context, viewport: viewport }).promise;
 
         document.getElementById('pageNavInfo').innerText = pageNum + " / " + currentPdfJsDoc.numPages;
+        document.getElementById('zoomPercent').innerText = Math.round(pdfScale * 100) + "%";
 
+        // Jaga agar TTD tetap berada di dalam batas kertas saat di-zoom
         var sigBox = document.getElementById('draggableSig');
-        if (sigBox.style.display !== 'none' && (!sigBox.style.top || sigBox.style.top === '50px')) {
-          sigBox.style.left = (canvas.width - sigBox.offsetWidth - 30) + 'px';
-          sigBox.style.top = (canvas.height - sigBox.offsetHeight - 30) + 'px';
+        if (sigBox.style.display !== 'none') {
+          var maxLeft = canvas.width - sigBox.offsetWidth;
+          var maxTop = canvas.height - sigBox.offsetHeight;
+          
+          if (!sigBox.style.top || sigBox.style.top === '50px') {
+            sigBox.style.left = Math.max(0, canvas.width - sigBox.offsetWidth - 30) + 'px';
+            sigBox.style.top = Math.max(0, canvas.height - sigBox.offsetHeight - 30) + 'px';
+          } else {
+            if (sigBox.offsetLeft > maxLeft) sigBox.style.left = Math.max(0, maxLeft) + 'px';
+            if (sigBox.offsetTop > maxTop) sigBox.style.top = Math.max(0, maxTop) + 'px';
+          }
         }
+      }
+
+      function zoomPdf(delta) {
+        if (pdfScale === 'auto') pdfScale = 0.8;
+        pdfScale = Math.max(0.3, Math.min(2.5, pdfScale + delta));
+        renderPdfPage(pdfPageNum);
+      }
+
+      function fitPdfPage() {
+        pdfScale = 'auto';
+        renderPdfPage(pdfPageNum);
       }
 
       function changePdfPage(direction) {
@@ -566,8 +634,8 @@
           sigBox.style.display = 'block';
 
           var canvas = document.getElementById('pdfCanvas');
-          sigBox.style.left = (canvas.width - 160) + 'px';
-          sigBox.style.top = (canvas.height - 120) + 'px';
+          sigBox.style.left = (canvas.width - 150) + 'px';
+          sigBox.style.top = (canvas.height - 100) + 'px';
         } catch (err) {
           alert("Gagal memuat PNG TTD: " + err.message);
         }

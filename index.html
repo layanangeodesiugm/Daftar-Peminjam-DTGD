@@ -86,30 +86,31 @@
 
     let globalData = [];
 
-    // Fungsi mengambil data menggunakan POST (Sesuai dengan sistem API Anda)
+    // Fungsi mengambil data menggunakan POST 
     async function fetchData() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '<tr><td colspan="9" class="loading">Memuat data dari server... Mohon tunggu.</td></tr>';
 
         try {
-            // Kita gunakan method POST dan kirim payload JSON {action: 'getPeminjamanData'}
             const response = await fetch(GAS_URL, {
                 method: 'POST',
-                // Mode text/plain sering digunakan untuk menghindari error CORS preflight di GAS
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+                headers: { 
+                    'Content-Type': 'text/plain;charset=utf-8' 
+                }, 
+                redirect: 'follow', // TAMBAHAN PENTING UNTUK MENGHINDARI CORS GOOGLE
                 body: JSON.stringify({ action: 'getPeminjamanData' })
             });
             
             const result = await response.json();
 
             if (result.status === "success") {
-                globalData = result.data; // Data sudah berbentuk Array of Objects dari Backend
+                globalData = result.data; 
                 renderTable(globalData);
             } else {
                 tbody.innerHTML = `<tr><td colspan="9" class="text-danger text-center">Gagal mengambil data: ${result.message}</td></tr>`;
             }
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Terjadi kesalahan jaringan atau URL Endpoint salah. Cek Console.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Terjadi kesalahan jaringan atau URL Endpoint salah. Pastikan API sudah di-deploy dengan akses "Anyone".</td></tr>';
             console.error("Error fetching data: ", error);
         }
     }
@@ -125,7 +126,6 @@
         }
 
         dataArray.forEach((row, index) => {
-            // Menentukan warna badge status
             let badgeClass = "bg-secondary";
             let statusText = row.statusOption || "Menunggu";
             
@@ -136,8 +136,6 @@
 
             let tr = document.createElement('tr');
             
-            // Karena kode backend Anda sudah menggunakan object (row.nama, row.email, dll),
-            // pemanggilan datanya menjadi sangat rapi seperti di bawah ini:
             tr.innerHTML = `
                 <td>${index + 1}</td>
                 <td>
@@ -154,7 +152,6 @@
                 <td><small>${row.emailCc || '-'}</small></td>
                 <td><span class="badge ${badgeClass}">${statusText}</span></td>
                 <td>
-                    <!-- Tombol aksi dikirim dengan data baris (rowIndex) -->
                     <button class="btn btn-sm btn-primary mb-1" onclick="alert('Ini akan memicu aksi untuk baris ke-${row.rowIndex}')">Kelola</button>
                 </td>
             `;
@@ -169,11 +166,9 @@
         const searchVal = document.getElementById('filterSearch').value.toLowerCase();
 
         const filteredData = globalData.filter(row => {
-            // Gabungkan teks untuk pencarian bebas
             const rowText = `${row.nama} ${row.jenisFasilitas} ${row.detailFasilitas}`.toLowerCase(); 
             const rowStatus = (row.statusOption || '').toLowerCase(); 
             
-            // Logika pencocokan filter
             const matchStatus = statusVal === "" || rowStatus.includes(statusVal);
             const matchSearch = searchVal === "" || rowText.includes(searchVal);
             const matchDate = dateVal === "" || (row.tglMulai && row.tglMulai.includes(dateVal)) || (row.tglSelesai && row.tglSelesai.includes(dateVal));

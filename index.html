@@ -20,10 +20,9 @@
 
 <div class="container-fluid">
     <div class="card p-4">
-        <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
             <h2 class="header-title m-0">Daftar Peminjaman Fasilitas Teknik Geodesi</h2>
-            <button class="btn btn-secondary" onclick="fetchData()">
+            <button class="btn btn-secondary" onclick="fetchData()" id="btnRefresh">
                 &#x21bb; Refresh Data
             </button>
         </div>
@@ -40,10 +39,6 @@
                 </select>
             </div>
             <div>
-                <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Filter Tanggal Mulai:</label>
-                <input type="date" id="filterTanggal" class="form-control form-control-sm" onchange="applyFilter()">
-            </div>
-            <div>
                 <label class="form-label mb-1" style="font-size: 12px; font-weight:bold;">Cari Nama / Fasilitas:</label>
                 <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Ketik nama / alat..." onkeyup="applyFilter()">
             </div>
@@ -58,46 +53,120 @@
                 <thead>
                     <tr>
                         <th>No</th>
-                        <th>Nama Peminjam & Kontak</th>
+                        <th>Nama & Kontak</th>
                         <th>Detail Fasilitas & Tanggal</th>
                         <th>Surat PDF</th>
                         <th>Keputusan Pengurus</th>
-                        <th>Opsi</th>
                         <th>Email CC</th>
                         <th>Status Akhir</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr>
-                        <td colspan="9" class="loading">Memuat data dari server... Mohon tunggu.</td>
-                    </tr>
+                    <tr><td colspan="8" class="loading">Memuat data dari server...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
+<!-- MODAL KELOLA (POPUP) -->
+<div class="modal fade" id="modalKelola" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Kelola Data Peminjaman</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Info Peminjam Singkat -->
+        <div class="alert alert-info p-2 mb-3">
+            <strong id="modalNama">-</strong> | <span id="modalFasilitas">-</span><br>
+            <small>Email: <span id="modalEmail">-</span></small>
+        </div>
+
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabEmail" type="button">1. Keputusan & Kirim Email</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabPdf" type="button">2. Tanda Tangan PDF</button>
+          </li>
+        </ul>
+        
+        <div class="tab-content border border-top-0 p-3 mb-3" id="myTabContent">
+          <!-- TAB EMAIL -->
+          <div class="tab-pane fade show active" id="tabEmail" role="tabpanel">
+            <form id="formKirimEmail">
+                <input type="hidden" id="inputRowIndex">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Opsi (Status)</label>
+                    <select class="form-select" id="inputOpsi" required>
+                        <option value="">-- Pilih Opsi --</option>
+                        <option value="Yes">Yes (Disetujui)</option>
+                        <option value="No">No (Ditolak)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Keputusan Pengurus (Pesan Email)</label>
+                    <textarea class="form-control" id="inputPesan" rows="3" placeholder="Tuliskan alasan disetujui/ditolak di sini..." required></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email CC (Opsional)</label>
+                    <input type="text" class="form-control" id="inputCc" placeholder="email1@ugm.ac.id, email2@ugm.ac.id">
+                </div>
+                
+                <div class="d-grid">
+                    <button type="button" class="btn btn-success" id="btnKirimEmail" onclick="kirimEmailAction()">Kirim Email Sekarang</button>
+                </div>
+                <div id="emailAlert" class="mt-2 text-center" style="display:none;"></div>
+            </form>
+          </div>
+          
+          <!-- TAB PDF -->
+          <div class="tab-pane fade" id="tabPdf" role="tabpanel">
+             <div class="text-center p-4">
+                 <p class="text-muted">Fitur Edit & Tanda Tangan PDF (Base64) membutuhkan library tambahan (seperti PDF.js / Fabric.js).</p>
+                 <button class="btn btn-outline-primary" onclick="alert('Ini akan memanggil API getPdfBase64 untuk baris: ' + document.getElementById('inputRowIndex').value)">Tarik File PDF dari Drive</button>
+             </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     // =========================================================================
-    // WAJIB GANTI URL DI BAWAH INI DENGAN WEB APP URL (doPost) ANDA!
+    // PASTIKAN URL INI BENAR (URL DOPOST ANDA)
     // =========================================================================
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec"; 
 
     let globalData = [];
+    let modalInstance = null; // Menyimpan instance modal Bootstrap
 
-    // Fungsi mengambil data menggunakan POST 
+    // Inisialisasi Modal saat web di-load
+    document.addEventListener("DOMContentLoaded", () => {
+        modalInstance = new bootstrap.Modal(document.getElementById('modalKelola'));
+    });
+
     async function fetchData() {
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '<tr><td colspan="9" class="loading">Memuat data dari server... Mohon tunggu.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="loading">Memuat data dari server... Mohon tunggu.</td></tr>';
 
         try {
             const response = await fetch(GAS_URL, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'text/plain;charset=utf-8' 
-                }, 
-                redirect: 'follow', // TAMBAHAN PENTING UNTUK MENGHINDARI CORS GOOGLE
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+                redirect: 'follow',
                 body: JSON.stringify({ action: 'getPeminjamanData' })
             });
             
@@ -107,21 +176,19 @@
                 globalData = result.data; 
                 renderTable(globalData);
             } else {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-danger text-center">Gagal mengambil data: ${result.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-danger text-center">Gagal mengambil data: ${result.message}</td></tr>`;
             }
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-danger text-center">Terjadi kesalahan jaringan atau URL Endpoint salah. Pastikan API sudah di-deploy dengan akses "Anyone".</td></tr>';
-            console.error("Error fetching data: ", error);
+            tbody.innerHTML = '<tr><td colspan="8" class="text-danger text-center">Terjadi kesalahan jaringan. Cek Console.</td></tr>';
         }
     }
 
-    // Fungsi menampilkan data ke tabel
     function renderTable(dataArray) {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
 
         if (dataArray.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center">Tidak ada data yang sesuai.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data yang sesuai.</td></tr>';
             return;
         }
 
@@ -135,34 +202,106 @@
             else if (statusText !== "Menunggu") badgeClass = "bg-info text-dark";
 
             let tr = document.createElement('tr');
-            
             tr.innerHTML = `
                 <td>${index + 1}</td>
-                <td>
-                    <strong>${row.nama || '-'}</strong><br>
-                    <small>${row.noHp || '-'} | ${row.email || '-'}</small>
-                </td>
-                <td>
-                    <strong>${row.jenisFasilitas || '-'}:</strong> ${row.detailFasilitas || '-'}<br>
-                    <small class="text-muted">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</small>
-                </td>
+                <td><strong>${row.nama || '-'}</strong><br><small>${row.noHp || '-'} | ${row.email || '-'}</small></td>
+                <td><strong>${row.jenisFasilitas || '-'}:</strong> ${row.detailFasilitas || '-'}<br><small class="text-muted">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</small></td>
                 <td>${row.suratUrl ? '<a href="'+row.suratUrl+'" target="_blank" class="btn btn-sm btn-outline-danger">Lihat PDF</a>' : '-'}</td>
                 <td>${row.keputusan || '-'}</td>
-                <td>${row.statusOption || '-'}</td>
                 <td><small>${row.emailCc || '-'}</small></td>
                 <td><span class="badge ${badgeClass}">${statusText}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary mb-1" onclick="alert('Ini akan memicu aksi untuk baris ke-${row.rowIndex}')">Kelola</button>
+                    <button class="btn btn-sm btn-primary" onclick="bukaModal(${index})">Kelola</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
+    // Fungsi untuk membuka Popup Modal dan mengisi data di dalamnya
+    function bukaModal(arrayIndex) {
+        const row = globalData[arrayIndex];
+        
+        // Isi info peminjam di atas form
+        document.getElementById('modalNama').innerText = row.nama;
+        document.getElementById('modalFasilitas').innerText = row.jenisFasilitas;
+        document.getElementById('modalEmail').innerText = row.email;
+        
+        // Isi form dengan data yang sudah ada (jika mau di-edit ulang)
+        document.getElementById('inputRowIndex').value = row.rowIndex;
+        document.getElementById('inputOpsi').value = (row.statusOption === 'done') ? '' : (row.statusOption || '');
+        document.getElementById('inputPesan').value = row.keputusan || '';
+        document.getElementById('inputCc').value = row.emailCc || '';
+        
+        // Reset alert
+        document.getElementById('emailAlert').style.display = 'none';
+
+        // Tampilkan Modal
+        modalInstance.show();
+    }
+
+    // Fungsi memanggil API kirimEmailBaris ke Google Apps Script
+    async function kirimEmailAction() {
+        const rowIndex = document.getElementById('inputRowIndex').value;
+        const opsi = document.getElementById('inputOpsi').value;
+        const pesan = document.getElementById('inputPesan').value;
+        const cc = document.getElementById('inputCc').value;
+
+        if(!opsi || !pesan) {
+            alert("Harap isi Opsi dan Keputusan Pengurus!");
+            return;
+        }
+
+        const btn = document.getElementById('btnKirimEmail');
+        const alertBox = document.getElementById('emailAlert');
+        
+        btn.disabled = true;
+        btn.innerText = "Memproses...";
+        alertBox.style.display = 'block';
+        alertBox.className = 'mt-2 alert alert-warning text-center';
+        alertBox.innerText = 'Sedang mengirim email, mohon tunggu...';
+
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                redirect: 'follow',
+                body: JSON.stringify({
+                    action: 'kirimEmailBaris',
+                    data: {
+                        rowIndex: parseInt(rowIndex),
+                        newOption: opsi,
+                        newMessage: pesan,
+                        ccEmails: cc
+                    }
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === "success") {
+                alertBox.className = 'mt-2 alert alert-success text-center';
+                alertBox.innerText = result.data; // Pesan sukses dari backend
+                setTimeout(() => {
+                    modalInstance.hide();
+                    fetchData(); // Refresh tabel setelah sukses
+                }, 2000);
+            } else {
+                alertBox.className = 'mt-2 alert alert-danger text-center';
+                alertBox.innerText = 'Gagal: ' + result.message;
+            }
+        } catch (error) {
+            alertBox.className = 'mt-2 alert alert-danger text-center';
+            alertBox.innerText = 'Terjadi kesalahan jaringan!';
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Kirim Email Sekarang";
+        }
+    }
+
     // Fungsi Filter Data
     function applyFilter() {
         const statusVal = document.getElementById('filterStatus').value.toLowerCase();
-        const dateVal = document.getElementById('filterTanggal').value;
         const searchVal = document.getElementById('filterSearch').value.toLowerCase();
 
         const filteredData = globalData.filter(row => {
@@ -171,23 +310,18 @@
             
             const matchStatus = statusVal === "" || rowStatus.includes(statusVal);
             const matchSearch = searchVal === "" || rowText.includes(searchVal);
-            const matchDate = dateVal === "" || (row.tglMulai && row.tglMulai.includes(dateVal)) || (row.tglSelesai && row.tglSelesai.includes(dateVal));
 
-            return matchStatus && matchSearch && matchDate;
+            return matchStatus && matchSearch;
         });
-
         renderTable(filteredData);
     }
 
-    // Reset Filter
     function resetFilter() {
         document.getElementById('filterStatus').value = "";
-        document.getElementById('filterTanggal').value = "";
         document.getElementById('filterSearch').value = "";
         renderTable(globalData);
     }
 
-    // Panggil fetch data otomatis saat web pertama kali dibuka
     window.onload = fetchData;
 </script>
 

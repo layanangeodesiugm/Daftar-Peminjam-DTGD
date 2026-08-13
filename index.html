@@ -160,7 +160,6 @@
                         <input type="text" class="form-control" id="inputTeksPdf" placeholder="Yogyakarta, 20 Agustus 2026">
                         <button class="btn btn-outline-secondary" onclick="tampilkanTeks()">Munculkan</button>
                     </div>
-                    <!-- Tambahan Fitur Skala Teks -->
                     <label class="form-label fw-bold text-dark mb-0" style="font-size: 11px;">Atur Ukuran Teks</label>
                     <input type="range" class="form-range" id="skalaTeks" min="10" max="50" value="16" oninput="aturSkalaTeks()">
                 </div>
@@ -279,11 +278,18 @@
             let btnEditPdf = `<button class="btn btn-outline-warning text-dark fw-bold btn-sm py-0 px-2 w-100" style="font-size:10px;" onclick="bukaModalPdf(${row.rowIndex})">Edit TTD</button>`;
 
             let currentItemNumber = startIndex + index + 1;
+            
+            // Mengambil nomor HP dari object row (mengantisipasi beberapa format penamaan umum)
+            let noHp = row.noHp || row.noTelp || row.telepon || '-';
 
             let tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="col-no">${currentItemNumber}</td>
-                <td class="col-nama"><strong>${row.nama || '-'}</strong><br><span class="text-muted">${row.email || '-'}</span></td>
+                <td class="col-nama">
+                    <strong>${row.nama || '-'}</strong><br>
+                    <span class="text-muted">${row.email || '-'}</span><br>
+                    <span class="text-muted fw-bold" style="font-size: 10px;">&#128222; ${noHp}</span>
+                </td>
                 <td class="col-detail"><strong>${row.jenisFasilitas || '-'}</strong><br><span class="text-muted">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</span></td>
                 <td class="col-pdf text-center">${btnPdf}<br>${btnEditPdf}</td>
                 <td class="col-keputusan"><div style="max-height:60px; overflow-y:auto;">${row.keputusan || '-'}</div></td>
@@ -460,7 +466,6 @@
         document.getElementById('stamp-image').style.width = document.getElementById('skalaTtd').value + 'px'; 
     }
     
-    // Fungsi Baru: Atur Skala Teks
     function aturSkalaTeks() {
         const ukuranTeks = document.getElementById('skalaTeks').value;
         document.getElementById('teks-draggable').style.fontSize = ukuranTeks + 'px';
@@ -474,7 +479,7 @@
         el.style.display = 'block';
         el.style.top = '100px'; 
         el.style.left = '100px';
-        aturSkalaTeks(); // panggil agar mengikuti slider yang sedang aktif
+        aturSkalaTeks(); 
     }
 
     function initDragElement(elmnt) {
@@ -530,7 +535,6 @@
                 const txtX = txtEl.offsetLeft * scaleX;
                 const txtY = height - ((txtEl.offsetTop + txtEl.offsetHeight) * scaleY) + (10 * scaleY); 
                 
-                // Ambil ukuran font dinamis dari input slider
                 const currentFontSize = parseInt(document.getElementById('skalaTeks').value) || 16;
                 
                 currentPage.drawText(txtEl.innerText, { x: txtX, y: txtY, size: currentFontSize * scaleX, color: rgb(0, 0, 0) });

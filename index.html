@@ -20,8 +20,8 @@
         .table-custom th { background-color: #1a73e8 !important; color: white !important; font-size: 12px; text-align: center; vertical-align: middle; padding: 8px 4px; }
         .table-custom td { font-size: 11px; vertical-align: middle; padding: 6px 4px; word-wrap: break-word; overflow-wrap: break-word; word-break: break-word; white-space: normal; }
         
-        .col-no { width: 3%; text-align: center; }
-        .col-nama { width: 16%; }
+        .col-no { width: 4%; text-align: center; }
+        .col-nama { width: 15%; }
         .col-detail { width: 20%; }
         .col-pdf { width: 10%; text-align: center; }
         .col-keputusan { width: 12%; }
@@ -72,7 +72,7 @@
         </div>
 
         <div class="table-responsive w-100 overflow-hidden">
-            <table class="table table-bordered table-hover table-custom">
+            <table class="table table-bordered table-hover table-custom mb-0">
                 <thead>
                     <tr>
                         <th class="col-no">No</th>
@@ -90,6 +90,9 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Wadah untuk Tombol Pagination -->
+        <div id="pagination-controls" class="d-flex justify-content-center align-items-center mt-3 gap-2"></div>
     </div>
 </div>
 
@@ -138,7 +141,6 @@
       </div>
       <div class="modal-body p-3">
         <div class="row">
-            <!-- Sidebar Kiri -->
             <div class="col-md-3 border-end">
                 <button class="btn btn-primary btn-sm w-100 mb-3" id="btnTarikPdf" onclick="tarikPdfServer()">1. Tarik PDF dari Server</button>
                 <hr>
@@ -149,15 +151,12 @@
                 </div>
                 <button class="btn btn-success btn-sm w-100 mb-2" id="btnTampilTtd" onclick="tampilkanTTD()">Tampilkan TTD</button>
                 
-                <!-- Slider Ukuran TTD -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-dark" style="font-size: 12px;">Atur Ukuran TTD</label>
                     <input type="range" class="form-range" id="skalaTtd" min="50" max="400" value="150" oninput="aturSkalaTtd()">
                 </div>
-                
                 <hr>
                 
-                <!-- Input Teks / Tanggal -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-dark" style="font-size: 12px;">3. Tambah Teks / Tanggal</label>
                     <div class="input-group input-group-sm">
@@ -165,22 +164,19 @@
                         <button class="btn btn-outline-secondary" onclick="tampilkanTeks()">Munculkan</button>
                     </div>
                 </div>
-                
                 <hr>
-                <!-- Tombol Simpan -->
+                
                 <button class="btn btn-danger btn-sm w-100 fw-bold py-2 mt-2" id="btnSimpanPdf" onclick="prosesSimpanPdf()">&#128190; Simpan PDF ke Server</button>
                 <div id="simpanAlert" class="mt-2 text-center" style="display:none; font-size:12px;"></div>
             </div>
             
-            <!-- Area Tengah (Canvas PDF) -->
             <div class="col-md-9 text-center">
                 <div class="bg-light p-2 mb-2 d-flex justify-content-center gap-3 align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="gantiHalaman(-1)">&#8592; Prev</button>
+                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="gantiHalamanPdf(-1)">&#8592; Prev</button>
                     <span style="font-size:12px;">Halaman: <span id="pageNum">1</span> / <span id="pageCount">?</span></span>
-                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="gantiHalaman(1)">Next &#8594;</button>
+                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="gantiHalamanPdf(1)">Next &#8594;</button>
                 </div>
                 <div id="pdf-outer-wrapper">
-                    <!-- Wrapper utama (kordinat akan dihitung dari sini) -->
                     <div id="pdf-wrapper">
                         <canvas id="pdf-canvas"></canvas>
                         <img id="stamp-image" class="draggable-item" src="" alt="TTD" draggable="false">
@@ -197,13 +193,15 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // ==========================================
-    // KONFIGURASI URL APPS SCRIPT
-    // ==========================================
     // MASUKKAN LINK WEB APP ANDA DI SINI
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyuCgb2lZX4jQs7I1ckX6dElENTED3Ox-QrIM8zpxzIxakssNebDYbVCh3Uuao9n5RliA/exec"; 
+    const GAS_URL = "URL_WEB_APP_ANDA_DISINI"; 
 
+    // --- VARIABEL GLOBAL PAGINATION ---
     let globalData = [];
+    let filteredData = []; 
+    let currentPage = 1;
+    const itemsPerPage = 10; // Jumlah data per halaman
+    
     let modalEmailInstance, modalPdfInstance;
     
     // State PDF & Gambar
@@ -226,28 +224,47 @@
     });
 
     // ==========================================
-    // TABEL DATA & FILTER
+    // TABEL DATA, FILTER, & PAGINATION
     // ==========================================
     async function fetchData() {
         const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Memuat data...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">Mengambil data dari server... Mohon tunggu.</td></tr>';
+        document.getElementById('pagination-controls').innerHTML = '';
+        
         try {
             const response = await fetch(GAS_URL, {
                 method: 'POST', body: JSON.stringify({ action: 'getPeminjamanData' })
             });
             const result = await response.json();
             if (result.status === "success") {
-                globalData = result.data; renderTable(globalData);
-            } else { tbody.innerHTML = `<tr><td colspan="8" class="text-danger">Gagal: ${result.message}</td></tr>`; }
-        } catch (error) { tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Error Jaringan. Pastikan URL Apps Script Benar!</td></tr>'; }
+                globalData = result.data; 
+                filteredData = [...globalData];
+                currentPage = 1;
+                renderTable();
+            } else { 
+                tbody.innerHTML = `<tr><td colspan="8" class="text-danger">Gagal: ${result.message}</td></tr>`; 
+            }
+        } catch (error) { 
+            tbody.innerHTML = '<tr><td colspan="8" class="text-danger">Error Jaringan. Pastikan URL Apps Script Benar!</td></tr>'; 
+        }
     }
 
-    function renderTable(dataArray) {
+    function renderTable() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        if (dataArray.length === 0) return tbody.innerHTML = '<tr><td colspan="8" class="text-center">Tidak ada data.</td></tr>';
+        
+        if (filteredData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3">Tidak ada data.</td></tr>';
+            setupPagination();
+            return; 
+        }
 
-        dataArray.forEach((row, index) => {
+        // Tentukan Index Start dan End berdasarkan Halaman
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedItems = filteredData.slice(startIndex, endIndex);
+
+        paginatedItems.forEach((row, index) => {
             let badgeClass = "bg-secondary";
             let statusText = row.statusOption || "Menunggu";
             if (statusText.toLowerCase() === "done") badgeClass = "bg-success";
@@ -265,9 +282,12 @@
             let btnPdf = row.suratUrl ? `<a href="${row.suratUrl}" target="_blank" class="btn btn-outline-danger btn-sm py-0 px-2 w-100 mb-1" style="font-size:10px;">Lihat PDF</a>` : '-';
             let btnEditPdf = `<button class="btn btn-outline-warning text-dark fw-bold btn-sm py-0 px-2 w-100" style="font-size:10px;" onclick="bukaModalPdf(${row.rowIndex})">Edit TTD</button>`;
 
+            // Urutan Nomor (No) berlanjut meskipun ganti halaman
+            let currentItemNumber = startIndex + index + 1;
+
             let tr = document.createElement('tr');
             tr.innerHTML = `
-                <td class="col-no">${index + 1}</td>
+                <td class="col-no">${currentItemNumber}</td>
                 <td class="col-nama"><strong>${row.nama || '-'}</strong><br><span class="text-muted">${row.email || '-'}</span></td>
                 <td class="col-detail"><strong>${row.jenisFasilitas || '-'}</strong><br><span class="text-muted">${row.tglMulai || '?'} s/d ${row.tglSelesai || '?'}</span></td>
                 <td class="col-pdf text-center">${btnPdf}<br>${btnEditPdf}</td>
@@ -278,17 +298,62 @@
             `;
             tbody.appendChild(tr);
         });
+
+        // Setup tombol halaman setelah tabel ter-render
+        setupPagination();
+    }
+
+    function setupPagination() {
+        const container = document.getElementById('pagination-controls');
+        container.innerHTML = '';
+        
+        const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+        if (totalPages <= 1) return; // Sembunyikan pagination jika hanya 1 halaman
+
+        // Tombol Prev
+        const btnPrev = document.createElement('button');
+        btnPrev.className = 'btn btn-sm ' + (currentPage === 1 ? 'btn-secondary disabled' : 'btn-outline-primary');
+        btnPrev.innerText = '<< Sebelumnya';
+        btnPrev.onclick = () => { if(currentPage > 1) { currentPage--; renderTable(); } };
+        container.appendChild(btnPrev);
+
+        // Keterangan Halaman
+        const spanInfo = document.createElement('span');
+        spanInfo.className = 'mx-3 fw-bold';
+        spanInfo.style.fontSize = '13px';
+        spanInfo.innerText = `Halaman ${currentPage} dari ${totalPages}`;
+        container.appendChild(spanInfo);
+
+        // Tombol Next
+        const btnNext = document.createElement('button');
+        btnNext.className = 'btn btn-sm ' + (currentPage === totalPages ? 'btn-secondary disabled' : 'btn-outline-primary');
+        btnNext.innerText = 'Selanjutnya >>';
+        btnNext.onclick = () => { if(currentPage < totalPages) { currentPage++; renderTable(); } };
+        container.appendChild(btnNext);
     }
 
     function applyFilter() {
         const sVal = document.getElementById('filterStatus').value.toLowerCase();
         const qVal = document.getElementById('filterSearch').value.toLowerCase();
-        renderTable(globalData.filter(r => 
+        
+        // Filter data global
+        filteredData = globalData.filter(r => 
             (sVal === "" || (r.statusOption||'').toLowerCase().includes(sVal)) && 
             (qVal === "" || `${r.nama} ${r.jenisFasilitas} ${r.detailFasilitas}`.toLowerCase().includes(qVal))
-        ));
+        );
+        
+        // Reset kembali ke halaman 1 setiap kali mencari
+        currentPage = 1;
+        renderTable();
     }
-    function resetFilter() { document.getElementById('filterStatus').value = ""; document.getElementById('filterSearch').value = ""; renderTable(globalData); }
+    
+    function resetFilter() { 
+        document.getElementById('filterStatus').value = ""; 
+        document.getElementById('filterSearch').value = ""; 
+        filteredData = [...globalData];
+        currentPage = 1;
+        renderTable(); 
+    }
 
     // ==========================================
     // EMAIL
@@ -321,13 +386,12 @@
     }
 
     // ==========================================
-    // PDF EDITOR (TARIK, TTD, TEKS, SIMPAN)
+    // PDF EDITOR
     // ==========================================
     function bukaModalPdf(rIndex) {
         currentPdfRowIndex = rIndex;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Reset element PDF
         document.getElementById('stamp-image').style.display = 'none';
         document.getElementById('teks-draggable').style.display = 'none';
         document.getElementById('inputTeksPdf').value = "";
@@ -348,7 +412,6 @@
                 base64PdfAsli = res.data.base64;
                 originalPdfFileName = res.data.fileName;
                 
-                // Decode base64 to Uint8Array for PDF.js
                 const pdfData = atob(base64PdfAsli);
                 const pdfArray = new Uint8Array(pdfData.length);
                 for (let i = 0; i < pdfData.length; i++) pdfArray[i] = pdfData.charCodeAt(i);
@@ -363,12 +426,10 @@
     function renderPage(num) {
         pageRendering = true;
         pdfDoc.getPage(num).then(function(page) {
-            // Skala agar tidak pecah 
             const viewport = page.getViewport({scale: 1.2});
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             
-            // Set wrapper sama persis dimensinya dengan canvas (Penting untuk perhitungan koordinat save PDF)
             const wrapper = document.getElementById('pdf-wrapper');
             wrapper.style.width = viewport.width + 'px';
             wrapper.style.height = viewport.height + 'px';
@@ -381,7 +442,7 @@
         document.getElementById('pageNum').textContent = num;
     }
     
-    function gantiHalaman(step) {
+    function gantiHalamanPdf(step) {
         if (!pdfDoc) return;
         if (pageNum + step < 1 || pageNum + step > pdfDoc.numPages) return;
         pageNum += step;
@@ -392,7 +453,7 @@
         const urlTtd = document.getElementById('inputUrlTtd').value;
         if(!urlTtd) { alert("Masukkan URL Drive TTD terlebih dahulu!"); return; }
         
-        const btn = document.getElementById('btnTampilTtd'); btn.innerText = "Mengambil TTD..."; btn.disabled = true;
+        const btn = document.getElementById('btnTampilTtd'); btn.innerText = "Mengambil..."; btn.disabled = true;
         try {
             const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'getSignaturePngBase64', url: urlTtd }) }).then(r=>r.json());
             if(res.status === "success") {
@@ -408,12 +469,8 @@
         } catch(e) { alert("Error mengambil gambar TTD."); } finally { btn.innerText = "Tampilkan TTD"; btn.disabled = false; }
     }
 
-    // Fungsi Scale Up/Down TTD
-    function aturSkalaTtd() { 
-        document.getElementById('stamp-image').style.width = document.getElementById('skalaTtd').value + 'px'; 
-    }
+    function aturSkalaTtd() { document.getElementById('stamp-image').style.width = document.getElementById('skalaTtd').value + 'px'; }
     
-    // Fungsi Munculkan Teks/Tanggal
     function tampilkanTeks() {
         const teks = document.getElementById('inputTeksPdf').value;
         const el = document.getElementById('teks-draggable');
@@ -424,36 +481,27 @@
         el.style.left = '100px';
     }
 
-    // Fungsi Drag & Drop Mouse (Teks & Gambar)
     function initDragElement(elmnt) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
         elmnt.onmousedown = (e) => {
-            e.preventDefault(); 
-            pos3 = e.clientX; 
-            pos4 = e.clientY;
+            e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY;
             document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
             document.onmousemove = (e) => {
                 e.preventDefault();
-                pos1 = pos3 - e.clientX; 
-                pos2 = pos4 - e.clientY; 
-                pos3 = e.clientX; 
-                pos4 = e.clientY;
+                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY;
                 elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
                 elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
             };
         };
     }
 
-    // ==========================================
-    // SAVE PDF & BURN TTD + TEKS (PDF-LIB)
-    // ==========================================
     async function prosesSimpanPdf() {
         if (!base64PdfAsli) { alert("Tarik PDF terlebih dahulu!"); return; }
         
         const btn = document.getElementById('btnSimpanPdf');
         const alertBox = document.getElementById('simpanAlert');
         btn.disabled = true; btn.innerText = "Membakar Dokumen...";
-        alertBox.style.display = 'block'; alertBox.className = "mt-2 alert alert-warning text-center"; alertBox.innerText = "Sedang menggabungkan (Burn) TTD ke Dokumen Asli...";
+        alertBox.style.display = 'block'; alertBox.className = "mt-2 alert alert-warning text-center"; alertBox.innerText = "Sedang menggabungkan...";
 
         try {
             const { PDFDocument, rgb } = PDFLib;
@@ -461,18 +509,12 @@
             const pages = pdfDocLib.getPages();
             const currentPage = pages[pageNum - 1];
             
-            // Dimensi dari file PDF asli di server
             const { width, height } = currentPage.getSize();
-            
-            // Dimensi dari Tampilan HTML (Canvas) saat ini
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
-            
-            // Rasio perbedaan layar HTML dan PDF asli
             const scaleX = width / canvasWidth;
             const scaleY = height / canvasHeight;
 
-            // 1. BURN GAMBAR TTD
             const imgEl = document.getElementById('stamp-image');
             if (imgEl.style.display !== 'none' && base64TtdAsli) {
                 let embeddedImage;
@@ -481,38 +523,25 @@
 
                 const imgWidthPdf = imgEl.offsetWidth * scaleX;
                 const imgHeightPdf = imgEl.offsetHeight * scaleY;
-                
-                // Konversi Y terbalik (PDF dihitung dari bawah ke atas)
                 const pdfX = imgEl.offsetLeft * scaleX;
                 const pdfY = height - ((imgEl.offsetTop + imgEl.offsetHeight) * scaleY);
 
-                currentPage.drawImage(embeddedImage, {
-                    x: pdfX, y: pdfY, width: imgWidthPdf, height: imgHeightPdf
-                });
+                currentPage.drawImage(embeddedImage, { x: pdfX, y: pdfY, width: imgWidthPdf, height: imgHeightPdf });
             }
 
-            // 2. BURN TEKS (Tanggal dll)
             const txtEl = document.getElementById('teks-draggable');
             if (txtEl.style.display !== 'none') {
                 const txtX = txtEl.offsetLeft * scaleX;
-                // Ditambah sedikit offset '10' agar kordinat dasar teks tidak terlalu terpotong
                 const txtY = height - ((txtEl.offsetTop + txtEl.offsetHeight) * scaleY) + (10 * scaleY); 
-                
-                currentPage.drawText(txtEl.innerText, {
-                    x: txtX, y: txtY, size: 16 * scaleX, color: rgb(0, 0, 0)
-                });
+                currentPage.drawText(txtEl.innerText, { x: txtX, y: txtY, size: 16 * scaleX, color: rgb(0, 0, 0) });
             }
 
             alertBox.innerText = "Mengunggah PDF ke Google Drive...";
 
-            // 3. Simpan base64 PDF yang sudah tertempel (Burned)
             const savedPdfBase64 = await pdfDocLib.saveAsBase64();
             const res = await fetch(GAS_URL, {
                 method: 'POST',
-                body: JSON.stringify({
-                    action: 'saveSignedPdf',
-                    data: { rowIndex: currentPdfRowIndex, base64Data: savedPdfBase64, fileName: originalPdfFileName }
-                })
+                body: JSON.stringify({ action: 'saveSignedPdf', data: { rowIndex: currentPdfRowIndex, base64Data: savedPdfBase64, fileName: originalPdfFileName } })
             }).then(r=>r.json());
 
             if (res.status === "success") {
@@ -520,19 +549,16 @@
                 alertBox.innerText = res.data;
                 setTimeout(() => { modalPdfInstance.hide(); fetchData(); }, 2000);
             } else {
-                alertBox.className = "mt-2 alert alert-danger text-center";
-                alertBox.innerText = "Gagal: " + res.message;
+                alertBox.className = "mt-2 alert alert-danger text-center"; alertBox.innerText = "Gagal: " + res.message;
             }
         } catch(error) {
             alertBox.className = "mt-2 alert alert-danger text-center";
             alertBox.innerText = "Terjadi kesalahan saat memproses PDF.";
-            console.error(error);
         } finally {
             btn.disabled = false; btn.innerHTML = "&#128190; Simpan PDF ke Server";
         }
     }
 
-    // Auto-fetch waktu pertama kali load
     window.onload = fetchData;
 </script>
 
